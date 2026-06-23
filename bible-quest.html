@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bible Quest</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;700&display=swap');
+:root {
+  --parchment:#f5ead6;--parchment-dark:#e8d5b0;--ink:#2c1810;--ink-light:#5a3a28;
+  --gold:#8b6914;--gold-bright:#c9a52a;--crimson:#8b1a1a;--sand:#c4a882;--olive:#6b7c4a;--stone:#9b8b7a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--ink);font-family:'EB Garamond',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+#app{width:100%;max-width:480px;min-height:100vh;background:var(--parchment);position:relative;}
+.screen{display:none;flex-direction:column;min-height:100vh;}
+.screen.active{display:flex;}
+
+/* HOME */
+#home-screen{align-items:center;justify-content:center;padding:40px 24px;background:linear-gradient(180deg,#1a0f08 0%,#2c1810 100%);}
+.home-scroll{width:280px;background:var(--parchment);padding:32px 24px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);position:relative;}
+.home-scroll::before,.home-scroll::after{content:'';display:block;height:14px;background:var(--parchment-dark);margin:0 -24px;}
+.home-scroll::before{border-radius:50% 50% 0 0/8px 8px 0 0;}
+.home-scroll::after{border-radius:0 0 50% 50%/0 0 8px 8px;margin-top:2px;}
+.home-cross{font-size:40px;color:var(--gold);margin-bottom:12px;display:block;}
+.home-title{font-family:'Cinzel',serif;font-size:28px;font-weight:700;color:var(--ink);letter-spacing:2px;line-height:1.1;}
+.home-title span{color:var(--gold);}
+.home-sub{font-size:13px;color:var(--ink-light);font-style:italic;margin:8px 0 20px;}
+.home-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;}
+.home-stat{background:var(--parchment-dark);padding:8px;text-align:center;}
+.home-stat-num{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:var(--gold);}
+.home-stat-label{font-size:10px;color:var(--stone);text-transform:uppercase;letter-spacing:1px;}
+.btn-primary{width:100%;padding:14px;background:var(--ink);color:var(--gold-bright);font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;text-transform:uppercase;border:none;cursor:pointer;}
+.btn-primary:active{opacity:.8;}
+
+/* MAP */
+#map-screen{background:var(--parchment);}
+.map-header{background:var(--ink);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+.map-title{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-bright);letter-spacing:2px;}
+.player-badge{font-family:'Cinzel',serif;font-size:11px;color:var(--sand);}
+.map-scroll-area{flex:1;overflow-y:auto;padding:20px 16px 100px;}
+.territory-path{display:flex;flex-direction:column;gap:0;position:relative;}
+.territory-path::before{content:'';position:absolute;left:36px;top:30px;bottom:30px;width:2px;background:repeating-linear-gradient(to bottom,var(--sand) 0,var(--sand) 8px,transparent 8px,transparent 16px);}
+.territory-node{display:flex;align-items:center;gap:16px;padding:12px 8px;cursor:pointer;position:relative;z-index:1;}
+.territory-node.locked{opacity:.4;cursor:default;}
+.territory-circle{width:52px;height:52px;border-radius:50%;border:2px solid var(--sand);background:var(--parchment-dark);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:22px;position:relative;}
+.territory-node.unlocked .territory-circle{border-color:var(--gold);box-shadow:0 2px 12px rgba(139,105,20,.3);}
+.territory-node.completed .territory-circle{background:var(--olive);border-color:var(--olive);}
+.territory-node.active-territory .territory-circle{border-color:var(--gold-bright);animation:glow 2s infinite alternate;}
+@keyframes glow{from{box-shadow:0 0 0 4px rgba(201,165,42,.2);}to{box-shadow:0 0 0 4px rgba(201,165,42,.4),0 4px 20px rgba(139,105,20,.5);}}
+.check-badge{position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:var(--olive);border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;color:white;border:2px solid var(--parchment);}
+.territory-info{flex:1;}
+.territory-name{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--ink);}
+.territory-node.locked .territory-name{color:var(--stone);}
+.territory-desc{font-size:12px;color:var(--ink-light);font-style:italic;margin-top:2px;}
+.territory-progress{font-size:11px;color:var(--stone);margin-top:4px;}
+.territory-stars{font-size:14px;}
+.map-bottom{position:fixed;bottom:0;width:100%;max-width:480px;background:var(--ink);padding:12px 20px;display:flex;align-items:center;z-index:10;}
+.xp-bar-wrap{flex:1;margin:0 16px;}
+.xp-label{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--stone);text-transform:uppercase;margin-bottom:4px;}
+.xp-track{height:4px;background:rgba(255,255,255,.1);}
+.xp-fill{height:100%;background:var(--gold-bright);transition:width .5s;}
+.level-badge{font-family:'Cinzel',serif;font-size:10px;color:var(--gold-bright);text-align:center;min-width:48px;}
+.level-num{font-size:20px;font-weight:700;display:block;line-height:1;}
+
+/* QUIZ */
+#quiz-screen{background:var(--parchment);}
+.quiz-header{background:var(--ink);padding:14px 20px;display:flex;align-items:center;gap:12px;}
+.back-btn{background:none;border:none;color:var(--gold-bright);font-size:18px;cursor:pointer;padding:4px;}
+.quiz-territory-name{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-bright);letter-spacing:1px;flex:1;}
+.quiz-progress-text{font-size:12px;color:var(--stone);}
+.quiz-timer-bar{height:3px;background:var(--parchment-dark);}
+.quiz-timer-fill{height:100%;background:var(--gold-bright);transition:width .1s linear;}
+.quiz-body{flex:1;padding:24px 20px;display:flex;flex-direction:column;gap:20px;}
+.quiz-q-num{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--stone);text-transform:uppercase;}
+.quiz-question{font-size:20px;color:var(--ink);line-height:1.45;font-weight:600;}
+.quiz-options{display:flex;flex-direction:column;gap:10px;}
+.quiz-option{padding:14px 16px;background:var(--parchment-dark);border:1.5px solid transparent;text-align:left;font-family:'EB Garamond',serif;font-size:16px;color:var(--ink);cursor:pointer;}
+.quiz-option:active{background:#dcc899;}
+.quiz-option.correct{background:#d4edda;border-color:var(--olive);color:#2d5a3d;}
+.quiz-option.wrong{background:#f8d7da;border-color:var(--crimson);color:var(--crimson);}
+.quiz-feedback{min-height:60px;padding:14px 16px;background:var(--parchment-dark);border-left:3px solid var(--gold);font-size:14px;color:var(--ink-light);font-style:italic;display:none;}
+.quiz-feedback.visible{display:block;}
+.quiz-feedback.correct-fb{border-color:var(--olive);}
+.quiz-feedback.wrong-fb{border-color:var(--crimson);}
+.quiz-next-btn{padding:14px;background:var(--ink);color:var(--gold-bright);font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;border:none;cursor:pointer;display:none;margin-top:auto;}
+.quiz-next-btn.visible{display:block;}
+
+/* RESULT */
+#result-screen{background:var(--ink);align-items:center;justify-content:center;padding:40px 24px;}
+.result-scroll{background:var(--parchment);width:100%;max-width:320px;padding:32px 24px;text-align:center;}
+.result-icon{font-size:48px;margin-bottom:12px;}
+.result-title{font-family:'Cinzel',serif;font-size:20px;color:var(--ink);margin-bottom:6px;}
+.result-territory{font-size:13px;color:var(--stone);font-style:italic;margin-bottom:20px;}
+.result-score-big{font-family:'Cinzel',serif;font-size:48px;font-weight:700;color:var(--gold);line-height:1;}
+.result-score-label{font-size:13px;color:var(--stone);margin-bottom:16px;}
+.result-stars{font-size:28px;letter-spacing:4px;margin-bottom:20px;}
+.result-verse{font-size:13px;color:var(--ink-light);font-style:italic;border-top:1px solid var(--sand);border-bottom:1px solid var(--sand);padding:12px 0;margin-bottom:20px;line-height:1.5;}
+.result-verse-ref{font-size:11px;color:var(--stone);margin-top:4px;}
+.result-xp{font-family:'Cinzel',serif;font-size:12px;color:var(--gold);margin-bottom:20px;}
+.result-btns{display:flex;flex-direction:column;gap:8px;}
+.btn-secondary{padding:12px;background:var(--parchment-dark);color:var(--ink);font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;}
+.share-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--stone);text-align:center;margin-top:4px;}
+.share-row{display:flex;gap:8px;}
+.share-btn{flex:1;padding:11px 6px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:none;cursor:pointer;color:white;font-weight:700;}
+.share-btn:active{opacity:.8;}
+.share-wa{background:#25d366;}
+.share-fb{background:#1877f2;}
+.share-tt{background:#010101;}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--parchment);padding:10px 18px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;z-index:9999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.4);}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="home-screen" class="screen active">
+  <div class="home-scroll">
+    <span class="home-cross">&#10011;</span>
+    <div class="home-title">BIBLE <span>QUEST</span></div>
+    <div class="home-sub">Marchez dans les traces des Ecritures</div>
+    <div class="home-stats">
+      <div class="home-stat"><div class="home-stat-num" id="home-territories">0/12</div><div class="home-stat-label">Territoires</div></div>
+      <div class="home-stat"><div class="home-stat-num" id="home-level">1</div><div class="home-stat-label">Niveau</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button onclick="setLang('fr')" id="btn-fr" style="flex:1;padding:8px;font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;border:1.5px solid var(--gold);background:var(--ink);color:var(--gold-bright);cursor:pointer;">FR</button>
+      <button onclick="setLang('en')" id="btn-en" style="flex:1;padding:8px;font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;border:1.5px solid var(--sand);background:transparent;color:var(--stone);cursor:pointer;">EN</button>
+    </div>
+    <button class="btn-primary" id="start-btn" onclick="showMap()">COMMENCER LA QUETE</button>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="map-screen" class="screen">
+  <div class="map-header">
+    <div class="map-title" id="map-title">TERRE SAINTE</div>
+    <div class="player-badge" id="map-player-badge">Disciple</div>
+  </div>
+  <div class="map-scroll-area"><div class="territory-path" id="territory-path"></div></div>
+  <div class="map-bottom">
+    <div class="level-badge"><span class="level-num" id="map-level">1</span>NIV</div>
+    <div class="xp-bar-wrap">
+      <div class="xp-label">Experience</div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--stone);text-align:right;"><span id="xp-current">0</span> XP</div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz-screen" class="screen">
+  <div class="quiz-header">
+    <button class="back-btn" onclick="showMap()">&#8592;</button>
+    <div class="quiz-territory-name" id="quiz-territory-name"></div>
+    <div class="quiz-progress-text" id="quiz-progress-text"></div>
+  </div>
+  <div class="quiz-timer-bar"><div class="quiz-timer-fill" id="quiz-timer-fill"></div></div>
+  <div class="quiz-body">
+    <div class="quiz-q-num" id="quiz-q-num"></div>
+    <div class="quiz-question" id="quiz-question"></div>
+    <div class="quiz-options" id="quiz-options"></div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>
+    <button class="quiz-next-btn" id="quiz-next-btn" onclick="nextQuestion()">CONTINUER</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="result-screen" class="screen">
+  <div class="result-scroll">
+    <div class="result-icon" id="result-icon">&#127942;</div>
+    <div class="result-title" id="result-title">Territoire Conquis</div>
+    <div class="result-territory" id="result-territory-name"></div>
+    <div class="result-score-big" id="result-score"></div>
+    <div class="result-score-label">bonnes reponses</div>
+    <div class="result-stars" id="result-stars"></div>
+    <div class="result-verse"><div id="result-verse-text"></div><div class="result-verse-ref" id="result-verse-ref"></div></div>
+    <div class="result-xp" id="result-xp"></div>
+    <div class="result-btns">
+      <button class="btn-primary" onclick="showMap()">RETOUR A LA CARTE</button>
+      <div class="share-label">Partager mon brevet</div>
+      <div class="share-row">
+        <button class="share-btn share-wa" onclick="shareResult('whatsapp')">WhatsApp</button>
+        <button class="share-btn share-fb" onclick="shareResult('facebook')">Facebook</button>
+        <button class="share-btn share-tt" onclick="shareResult('tiktok')">TikTok</button>
+      </div>
+      <button class="btn-secondary" onclick="replayTerritory()">REJOUER</button>
+      <button class="btn-secondary" onclick="showLeaderboard()">CLASSEMENT</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="leaderboard-screen" class="screen" style="background:var(--parchment);padding:0 0 80px;">
+  <div style="background:var(--ink);padding:14px 20px;display:flex;align-items:center;gap:12px;">
+    <button style="background:none;border:none;color:var(--gold-bright);font-size:18px;cursor:pointer;" onclick="showMap()">&#8592;</button>
+    <div style="font-family:'Cinzel',serif;font-size:14px;color:var(--gold-bright);letter-spacing:2px;">CLASSEMENT</div>
+  </div>
+  <div style="padding:16px 20px;">
+    <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--stone);text-transform:uppercase;margin-bottom:12px;">Score max + temps minimal = 1er rang</div>
+    <div style="margin-bottom:16px;">
+      <input id="player-name-input" type="text" placeholder="Ton nom" maxlength="20"
+        style="width:100%;padding:10px 12px;background:var(--parchment-dark);border:1px solid var(--sand);font-family:'EB Garamond',serif;font-size:15px;color:var(--ink);"
+        oninput="saveName(this.value)">
+    </div>
+    <div id="leaderboard-list"></div>
+  </div>
+</div>
+</div>
+<script>
+// ============================================================
+// DATA — all strings ASCII-safe, emojis via unicode escapes
+// ============================================================
+var T1 = [
+  { id:'creation', name:'Eden', icon:'\u{1F331}', desc:'La Genese', verse:'"Au commencement, Dieu crea les cieux et la terre."', verseRef:'Genese 1:1',
+    questions:[
+      {q:'En combien de jours Dieu crea-t-il le monde ?', options:['5 jours','6 jours','7 jours','10 jours'], answer:1, expl:'Dieu crea en 6 jours et se reposa le 7e (Genese 1-2).'},
+      {q:'Comment s\'appelait la femme creee par Dieu pour Adam ?', options:['Sara','Eve','Marie','Rebecca'], answer:1, expl:'Eve fut creee a partir d\'une cote d\'Adam (Genese 2:22).'},
+      {q:'Quel fruit etait interdit dans le jardin d\'Eden ?', options:['La figue','L\'olive','Le fruit de l\'arbre de la connaissance','Le raisin'], answer:2, expl:'Dieu interdit de manger du fruit de l\'arbre de la connaissance du bien et du mal.'},
+      {q:'Sous quelle forme le tentateur apparut-il a Eve ?', options:['Un lion','Un serpent','Un aigle','Un homme'], answer:1, expl:'Le serpent etait le plus ruse des animaux des champs (Genese 3:1).'},
+      {q:'Quels deux fils d\'Adam et Eve sont mentionnes en premier ?', options:['Jacob et Esau','Abraham et Lot','Cain et Abel','Sem et Cham'], answer:2, expl:'Cain et Abel sont les premiers fils d\'Adam et Eve (Genese 4).'}
+    ]},
+      {q:'Quel etait le role de l homme dans le jardin d Eden ?', options:['Le garder et le cultiver','Y habiter seulement','Nommer les animaux seulement','Le contempler'], answer:0, expl:'Dieu plaça l homme dans le jardin pour le cultiver et le garder (Genese 2:15).'},
+      {q:'Quel jour Dieu crea-t-il les luminaires ?', options:['Jour 2','Jour 3','Jour 4','Jour 5'], answer:2, expl:'Dieu fit les deux grands luminaires le quatrieme jour (Genese 1:16).'},
+      {q:'Quel jour Dieu crea-t-il les poissons et les oiseaux ?', options:['Jour 3','Jour 4','Jour 5','Jour 6'], answer:2, expl:'Les creatures aquatiques et les oiseaux furent crees le cinquieme jour (Genese 1:20-23).'},
+      {q:'Qu est-ce que Dieu fit a partir de la cote d Adam ?', options:['Un animal','La femme','Un arbre','Un ange'], answer:1, expl:'L Eternel Dieu fit une femme de la cote qu il avait prise de l homme (Genese 2:22).'},
+      {q:'Que signifia le nom Eve ?', options:['Lumiere','Mere de tous les vivants','Bien-aimee','Sagesse'], answer:1, expl:'Adam appela sa femme Eve parce qu elle etait la mere de tous les vivants (Genese 3:20).'},
+      {q:'Qu arriva-t-il a Cain apres qu il eut tue Abel ?', options:['Il fut execute','Il fut maudit et chasse','Il devint roi','Il fut pardonne immediatement'], answer:1, expl:'Dieu maudit Cain et le chassa de la terre (Genese 4:11-12).'},
+      {q:'Quel personnage ne mourut pas mais fut enleve par Dieu ?', options:['Adam','Seth','Enoch','Lamech'], answer:2, expl:'Enoch marcha avec Dieu, puis il disparut car Dieu l enleva (Genese 5:24).'},
+      {q:'Quel fils de Adam et Eve remplaça Abel ?', options:['Cain','Seth','Enos','Kenan'], answer:1, expl:'Eve donna naissance a Seth comme autre descendance a la place d Abel (Genese 4:25).'},
+      {q:'De quoi etaient faites les vetements que Dieu fit a Adam et Eve ?', options:['De feuilles de figuier','De peaux de betes','De lin','De laine'], answer:1, expl:'L Eternel Dieu fit a Adam et a sa femme des habits de peau (Genese 3:21).'},
+      {q:'Quel age avait Mathusalem, l homme le plus vieux de la Bible ?', options:['900 ans','950 ans','969 ans','999 ans'], answer:2, expl:'Mathusalem vecut 969 ans, c est le plus vieux personnage biblique (Genese 5:27).'},
+  { id:'noe', name:'Ararat', icon:'\u{1F54A}', desc:'Noe et le Deluge', verse:'"J\'etablis mon alliance avec vous."', verseRef:'Genese 9:11',
+    questions:[
+      {q:'Pourquoi Dieu envoya-t-il le deluge ?', options:['Une secheresse','La mechancete des hommes','Une guerre','La desobeissance de Noe'], answer:1, expl:'Dieu vit que la mechancete des hommes etait grande sur la terre (Genese 6:5).'},
+      {q:'Combien de paires d\'animaux impurs Noe prit-il dans l\'arche ?', options:['1 paire','2 paires','7 paires','10 paires'], answer:0, expl:'Une paire (male et femelle) de chaque animal impur (Genese 7:2).'},
+      {q:'Combien de jours dura la pluie lors du deluge ?', options:['7 jours','20 jours','40 jours','100 jours'], answer:2, expl:'La pluie tomba quarante jours et quarante nuits (Genese 7:12).'},
+      {q:'Quel oiseau Noe envoya-t-il pour voir si les eaux avaient baisse ?', options:['Un aigle','Un corbeau puis une colombe','Un moineau','Un faucon'], answer:1, expl:'Noe envoya d\'abord un corbeau, puis une colombe (Genese 8:6-8).'},
+      {q:'Quel signe Dieu donna-t-il a Noe apres le deluge ?', options:['Une etoile','Un arc-en-ciel','Un ange','Une flamme'], answer:1, expl:'L\'arc-en-ciel fut le signe de l\'alliance entre Dieu et toute creature (Genese 9:13).'}
+    ]},
+      {q:'Quel bois Noe utilisa-t-il pour construire l arche ?', options:['Cedre','Bois de gopher','Chene','Acacia'], answer:1, expl:'Dieu dit a Noe : Fais-toi une arche en bois de gopher (Genese 6:14).'},
+      {q:'Quel age avait Noe quand commença le deluge ?', options:['500 ans','600 ans','700 ans','800 ans'], answer:1, expl:'Noe avait six cents ans quand le deluge couvrit la terre (Genese 7:6).'},
+      {q:'Que fit Noe apres etre sorti de l arche ?', options:['Construisit une ville','Batit un autel et offrit des holocaustes','Planta une vigne immediatement','Envoya des messagers'], answer:1, expl:'Noe batit un autel a l Eternel et offrit des holocaustes (Genese 8:20).'},
+      {q:'Combien de fils Noe avait-il ?', options:['2','3','4','5'], answer:1, expl:'Noe eut trois fils : Sem, Cham et Japhet (Genese 6:10).'},
+      {q:'Que fit Cham qui offensa Noe ?', options:['Il vola sa nourriture','Il vit la nudite de son pere et le dit a ses freres','Il quitta la famille','Il brula l autel'], answer:1, expl:'Cham vit la nudite de son pere et le raconta a ses deux freres (Genese 9:22).'},
+      {q:'Quel fils de Noe fut maudit ?', options:['Sem','Cham lui-meme','Canaan fils de Cham','Japhet'], answer:2, expl:'Noe maudit Canaan, le fils de Cham (Genese 9:25).'},
+      {q:'Combien d etages avait l arche ?', options:['1','2','3','4'], answer:2, expl:'L arche avait un bas, un second et un troisieme etage (Genese 6:16).'},
+      {q:'Qu est-ce que Dieu permit a Noe de manger apres le deluge ?', options:['Seulement les vegetaux','Les animaux mais pas le sang','Tout sans restriction','Seulement les animaux purs'], answer:1, expl:'Dieu permit de manger les animaux mais interdit de consommer le sang (Genese 9:3-4).'},
+      {q:'A quel endroit la tour de Babel fut-elle construite ?', options:['En Egypte','Au pays de Shinear','En Canaan','En Mesopotamie du Nord'], answer:1, expl:'Les hommes trouverent une plaine au pays de Shinear et s y etablirent (Genese 11:2).'},
+      {q:'Quelle langue parlait l humanite avant la tour de Babel ?', options:['L hebreu','L arameen','Une seule langue','Le grec'], answer:2, expl:'Toute la terre avait une seule langue et les memes mots (Genese 11:1).'},
+  { id:'abraham', name:'Canaan', icon:'\u26FA', desc:'Abraham, Pere des Nations', verse:'"Je ferai de toi une grande nation."', verseRef:'Genese 12:2',
+    questions:[
+      {q:'De quelle ville Abraham fut-il appele a partir ?', options:['Jerusalem','Ur en Chaldee','Babylone','Memphis'], answer:1, expl:'Abraham (alors Abram) vivait a Ur en Chaldee (Genese 11:31).'},
+      {q:'Comment s\'appelait la femme d\'Abraham ?', options:['Rebecca','Lea','Sara','Rachel'], answer:2, expl:'Sara (d\'abord Sarai) etait l\'epouse d\'Abraham.'},
+      {q:'Quel fils Dieu demanda-t-il a Abraham de sacrifier ?', options:['Ismael','Jacob','Isaac','Joseph'], answer:2, expl:'Dieu mit Abraham a l\'epreuve en lui demandant de sacrifier Isaac (Genese 22).'},
+      {q:'Quel animal Dieu fournit pour remplacer le sacrifice d\'Isaac ?', options:['Un taureau','Un belier','Un agneau','Un bouc'], answer:1, expl:'Un belier retenu par les cornes dans un buisson remplaça Isaac (Genese 22:13).'},
+      {q:'Qui etait le neveu d\'Abraham sauve de Sodome ?', options:['Esau','Lot','Ismael','Moise'], answer:1, expl:'Lot, neveu d\'Abraham, fut sauve de la destruction de Sodome (Genese 19).'}
+    ]},
+      {q:'Quel age avait Abraham quand Isaac naquit ?', options:['75 ans','90 ans','100 ans','110 ans'], answer:2, expl:'Abraham avait cent ans quand Isaac lui naquit (Genese 21:5).'},
+      {q:'Comment s appelait le fils d Abraham avec Hagar ?', options:['Isaac','Ismael','Esau','Median'], answer:1, expl:'Hagar enfanta Ismael a Abram (Genese 16:15).'},
+      {q:'Quel signe de l alliance Dieu donna-t-il a Abraham ?', options:['Le bapteme','La circoncision','Le sabbat','L arc-en-ciel'], answer:1, expl:'Dieu institua la circoncision comme signe de l alliance avec Abraham (Genese 17:11).'},
+      {q:'Combien d hommes Abraham arma pour delivrer Lot ?', options:['100','218','318','500'], answer:2, expl:'Abraham arma 318 de ses serviteurs nes dans sa maison (Genese 14:14).'},
+      {q:'Qui benit Abraham apres la bataille pour delivrer Lot ?', options:['Sem','Melchisedek','Aaron','Nathan'], answer:1, expl:'Melchisedek, roi de Salem, benit Abraham (Genese 14:18-19).'},
+      {q:'Sur quelle montagne Abraham devait-il sacrifier Isaac ?', options:['Mont Sinai','Mont Morija','Mont Carmel','Mont Hermon'], answer:1, expl:'Dieu dit a Abraham d aller au pays de Morija (Genese 22:2).'},
+      {q:'Que devint la femme de Lot quand elle se retourna ?', options:['Elle mourut d un coup','Elle devint une statue de sel','Elle fut aveugle','Elle disparut'], answer:1, expl:'La femme de Lot regarda en arriere et devint une statue de sel (Genese 19:26).'},
+      {q:'Quelle fut la premiere femme d Isaac ?', options:['Lea','Sara','Rebecca','Rachel'], answer:2, expl:'Rebecca, fille de Bethuel, devint la femme d Isaac (Genese 24:67).'},
+      {q:'A quel age Abraham mourut-il ?', options:['150 ans','165 ans','175 ans','180 ans'], answer:2, expl:'Abraham vecut 175 ans (Genese 25:7).'},
+      {q:'Combien d enfants Abraham eut-il avec Ketoura apres la mort de Sara ?', options:['2','4','6','8'], answer:2, expl:'Ketoura enfanta a Abraham six fils (Genese 25:2).'},
+  { id:'moise', name:'Egypte', icon:'\u{1F33E}', desc:'Moise et l\'Exode', verse:'"Je suis celui qui suis."', verseRef:'Exode 3:14',
+    questions:[
+      {q:'Comment Moise fut-il sauve etant bebe ?', options:['Cache dans une grotte','Confie a un berger','Mis dans un panier sur le Nil','Envoye en Canaan'], answer:2, expl:'Sa mere le mit dans un panier en roseaux sur le Nil (Exode 2:3).'},
+      {q:'Combien de plaies Dieu envoya-t-il sur l\'Egypte ?', options:['7','10','12','5'], answer:1, expl:'Dieu envoya 10 plaies sur l\'Egypte pour liberer Israel (Exode 7-12).'},
+      {q:'Quelle fut la derniere plaie qui convainquit Pharaon ?', options:['La grele','Les tenebres','La mort des premiers-nes','Les sauterelles'], answer:2, expl:'La mort des premiers-nes fut la plaie decisive (Exode 12).'},
+      {q:'Sur quelle montagne Dieu donna-t-il les 10 commandements ?', options:['Mont Carmel','Mont Sinai','Mont Zion','Mont Thabor'], answer:1, expl:'Les 10 commandements furent donnes sur le mont Sinai (Exode 19-20).'},
+      {q:'Combien d\'annees Israel erra-t-il dans le desert ?', options:['10 ans','20 ans','40 ans','50 ans'], answer:2, expl:'Israel erra 40 ans dans le desert avant d\'entrer en Canaan (Nombres 14:33).'}
+    ]},
+      {q:'Qui etait le pere de Moise ?', options:['Aaron','Amram','Kehath','Levi'], answer:1, expl:'Amram prit pour femme Jochebed qui lui enfanta Aaron et Moise (Exode 6:20).'},
+      {q:'Comment s appelait la femme de Moise ?', options:['Miriam','Zippora','Deborah','Ruth'], answer:1, expl:'Moise prit Zippora, fille de Jethro, comme femme (Exode 2:21).'},
+      {q:'Quelle etait la premiere plaie sur l Egypte ?', options:['Les grenouilles','Les moustiques','L eau changee en sang','Les mouches'], answer:2, expl:'La premiere plaie fut que les eaux du Nil furent changees en sang (Exode 7:20).'},
+      {q:'Qu etait la manne que Dieu envoya dans le desert ?', options:['Un pain tombe du ciel','De la viande seche','Des fruits d arbres','Des grains de ble'], answer:0, expl:'La manne etait une nourriture que Dieu fit tomber du ciel pour Israel (Exode 16:4).'},
+      {q:'Que fit Moise en voyant le veau d or ?', options:['Il pria en silence','Il brisa les tables de la loi','Il s enfuit','Il adora avec le peuple'], answer:1, expl:'La colere de Moise s enflamma et il brisa les tables de la loi au bas de la montagne (Exode 32:19).'},
+      {q:'Quel age avait Moise quand il mourut ?', options:['100 ans','110 ans','120 ans','130 ans'], answer:2, expl:'Moise etait age de cent vingt ans a sa mort (Deuteronome 34:7).'},
+      {q:'Sur quelle montagne Moise mourut-il ?', options:['Mont Sinai','Mont Nebo','Mont Carmel','Mont Hor'], answer:1, expl:'Moise mourut sur le mont Nebo, dans le pays de Moab (Deuteronome 34:5).'},
+      {q:'Combien de fois Moise frappa-t-il le rocher pour en faire sortir de l eau ?', options:['1 fois','2 fois','3 fois','La Bible ne precise pas'], answer:1, expl:'Moise frappa le rocher deux fois et il en sortit de l eau abondante (Nombres 20:11).'},
+      {q:'Qui parla au nom de Moise devant Pharaon ?', options:['Josue','Caleb','Aaron','Miriam'], answer:2, expl:'Aaron parla au nom de Moise devant Pharaon (Exode 7:1-2).'},
+      {q:'Quel chef succeda a Moise pour conduire Israel en Canaan ?', options:['Caleb','Aaron','Josue','Eleazar'], answer:2, expl:'Josue fils de Nun fut designe par Dieu pour succeder a Moise (Deuteronome 31:23).'},
+  { id:'david', name:'Jerusalem', icon:'\u2605', desc:'David, Roi d\'Israel', verse:'"L\'Eternel est mon berger, je ne manquerai de rien."', verseRef:'Psaume 23:1',
+    questions:[
+      {q:'Quel geant David vainquit-il avec une fronde ?', options:['Og','Goliath','Sisara','Sihon'], answer:1, expl:'David vainquit Goliath le Philistin avec une fronde et une pierre (1 Samuel 17).'},
+      {q:'De quelle tribu David etait-il issu ?', options:['Levi','Benjamin','Juda','Ephraim'], answer:2, expl:'David etait de la tribu de Juda (Ruth 4:18-22).'},
+      {q:'Quel etait le metier de David avant d\'etre roi ?', options:['Pecheur','Berger','Charpentier','Soldat'], answer:1, expl:'David gardait les troupeaux de son pere Jesse (1 Samuel 16:11).'},
+      {q:'Qui etait l\'ami fidele de David parmi les fils du roi Saul ?', options:['Absalom','Nathan','Jonathan','Ittai'], answer:2, expl:'Jonathan, fils de Saul, aimait David comme sa propre ame (1 Samuel 18:1).'},
+      {q:'Combien de psaumes sont traditionnellement attribues a David ?', options:['50','73','100','150'], answer:1, expl:'73 psaumes portent le nom de David dans leurs titres.'}
+    ]},
+      {q:'Combien de freres avait David ?', options:['3','5','7','9'], answer:2, expl:'David etait le huitieme fils de Jesse, soit sept freres aines (1 Samuel 16:10-11).'},
+      {q:'Qui oignit David comme roi ?', options:['Nathan','Eli','Samuel','Gad'], answer:2, expl:'Samuel prit la corne d huile et oignit David au milieu de ses freres (1 Samuel 16:13).'},
+      {q:'Combien de pierres David prit-il pour affronter Goliath ?', options:['1','3','5','7'], answer:2, expl:'David choisit cinq pierres lisses dans le torrent (1 Samuel 17:40).'},
+      {q:'Combien d annees David regna-t-il sur tout Israel ?', options:['20 ans','33 ans','40 ans','50 ans'], answer:2, expl:'David regna quarante ans sur Israel (1 Rois 2:11).'},
+      {q:'Qui etait le prophete qui reprocha a David son peche ?', options:['Gad','Elie','Nathan','Amos'], answer:2, expl:'Nathan vint trouver David et lui dit la parabole de la brebis (2 Samuel 12:1).'},
+      {q:'Quel fils de David se revolta contre lui ?', options:['Salomon','Absalom','Amnon','Adonija'], answer:1, expl:'Absalom se revolta contre son pere David (2 Samuel 15).'},
+      {q:'Pourquoi David ne put-il pas construire le temple ?', options:['Manque d argent','Il avait verse trop de sang','Dieu ne le permit pas','Il mourut trop jeune'], answer:1, expl:'Dieu dit a David qu il avait verse beaucoup de sang (1 Chroniques 22:8).'},
+      {q:'Qui construisit le Temple de Jerusalem ?', options:['David','Salomon','Ezechias','Josias'], answer:1, expl:'Salomon, fils de David, construisit le temple (1 Rois 6:1).'},
+      {q:'Dans quelle ville David regna-t-il d abord avant Jerusalem ?', options:['Bethlehem','Hebron','Jericho','Samarie'], answer:1, expl:'David regna d abord sept ans a Hebron avant de prendre Jerusalem (2 Samuel 5:5).'},
+      {q:'Quel instrument David jouait-il pour apaiser le roi Saul ?', options:['La flute','La harpe','Le tambourin','La trompette'], answer:1, expl:'David jouait de la harpe et l esprit mauvais se retirait de Saul (1 Samuel 16:23).'},
+  { id:'nativite', name:'Bethlehem', icon:'\u2728', desc:'La Nativite', verse:'"Elle enfantera un fils, et tu lui donneras le nom de Jesus."', verseRef:'Matthieu 1:21',
+    questions:[
+      {q:'Dans quelle ville Jesus est-il ne ?', options:['Nazareth','Jerusalem','Bethlehem','Hebron'], answer:2, expl:'Jesus naquit a Bethlehem de Judee (Matthieu 2:1).'},
+      {q:'Qui annon\u00e7a la naissance de Jesus a Marie ?', options:['Gabriel','Michel','Raphael','Un prophete'], answer:0, expl:'L\'ange Gabriel fut envoye vers Marie a Nazareth (Luc 1:26-27).'},
+      {q:'Que firent les mages en arrivant chez l\'enfant Jesus ?', options:['Le baptiserent','Se prosternerent et offrirent des cadeaux','Le circumciserent','Prierent avec Joseph'], answer:1, expl:'Les mages se prosternerent et lui offrirent or, encens et myrrhe (Matthieu 2:11).'},
+      {q:'Qui etait le roi qui cherchait a tuer l\'enfant Jesus ?', options:['Pilate','Herode le Grand','Cesar Auguste','Archelaüs'], answer:1, expl:'Herode le Grand cherchait l\'enfant pour le faire mourir (Matthieu 2:13).'},
+      {q:'Dans quel pays Joseph et Marie s\'enfuirent-ils pour proteger Jesus ?', options:['Syrie','Babylone','Egypte','Grece'], answer:2, expl:'Joseph emmena l\'enfant et sa mere en Egypte (Matthieu 2:14).'}
+    ]},
+      {q:'Sous quel empereur romain Jesus naquit-il ?', options:['Tibere','Auguste','Neron','Claude'], answer:1, expl:'En ces jours-la parut un edit de Cesar Auguste (Luc 2:1).'},
+      {q:'Ou Jesus fut-il couche a sa naissance ?', options:['Dans une maison','Dans une grotte','Dans une creche','Dans une tente'], answer:2, expl:'Elle l enveloppa de langes et le coucha dans une creche (Luc 2:7).'},
+      {q:'Qui annonca la naissance de Jesus aux bergers ?', options:['Un prophete','Un ange de l Eternel','Une etoile','Jean le Baptiste'], answer:1, expl:'Un ange du Seigneur leur apparut et leur annonça la naissance du Sauveur (Luc 2:9-11).'},
+      {q:'Combien de mages la Bible mentionne-t-elle precisement ?', options:['2','3','La Bible ne precise pas','12'], answer:2, expl:'La Bible ne precise pas le nombre de mages. La tradition de 3 vient des 3 cadeaux.'},
+      {q:'Que fit Herode apres le depart des mages ?', options:['Il se repentit','Il fit tuer tous les garcons de moins de 2 ans a Bethlehem','Il envoya des soldats en Egypte','Il interrogea les prophetes'], answer:1, expl:'Herode fit tuer tous les enfants males de Bethlehem ages de 2 ans et moins (Matthieu 2:16).'},
+      {q:'A quel age Jesus alla-t-il au Temple et discuta avec les docteurs ?', options:['5 ans','10 ans','12 ans','15 ans'], answer:2, expl:'Quand Jesus eut 12 ans, ils monterent a Jerusalem (Luc 2:42).'},
+      {q:'Que repondit Jesus a Marie qui le cherchait au Temple ?', options:['Je priaia pour toi','Ne saviez-vous pas que je dois etre aux affaires de mon Pere ?','Je suis venu pour accomplir la loi','Le Royaume est proche'], answer:1, expl:'Jesus dit : Ne saviez-vous pas qu il faut que je m occupe des affaires de mon Pere ? (Luc 2:49).'},
+      {q:'Quels etaient les trois cadeaux des mages ?', options:['Or argent et myrrhe','Or encens et myrrhe','Or encens et oliban','Myrrhe encens et parfum'], answer:1, expl:'Les mages offrirent de l or, de l encens et de la myrrhe (Matthieu 2:11).'},
+      {q:'Pourquoi Joseph et Marie etaient-ils a Bethlehem ?', options:['Pour fuir Herode','Pour le recensement','Pour la fete de la Paque','Pour rendre visite a des parents'], answer:1, expl:'Joseph monta a Bethlehem pour se faire inscrire au recensement (Luc 2:4-5).'},
+      {q:'Que fit Jesus apres l episode du Temple a 12 ans ?', options:['Il commença son ministere','Il retourna a Nazareth et leur etait soumis','Il alla chez Jean le Baptiste','Il etudia a Jerusalem'], answer:1, expl:'Jesus retourna avec eux a Nazareth et leur etait soumis (Luc 2:51).'},
+  { id:'ministere', name:'Galilee', icon:'\u{1F41F}', desc:'Le Ministere de Jesus', verse:'"Repentez-vous, car le royaume des cieux est proche."', verseRef:'Matthieu 4:17',
+    questions:[
+      {q:'Qui baptisa Jesus dans le Jourdain ?', options:['Pierre','Jean le Baptiste','Andre','Philippe'], answer:1, expl:'Jean le Baptiste baptisa Jesus dans le Jourdain (Matthieu 3:13-16).'},
+      {q:'Combien de disciples Jesus choisit-il ?', options:['7','10','12','70'], answer:2, expl:'Jesus choisit douze disciples (Matthieu 10:1-4).'},
+      {q:'Quel fut le premier miracle de Jesus selon l\'Evangile de Jean ?', options:['Guerir un aveugle','Multiplier les pains','Changer l\'eau en vin','Ressusciter Lazare'], answer:2, expl:'Jesus changea l\'eau en vin aux noces de Cana (Jean 2:1-11).'},
+      {q:'Combien de pains Jesus utilisa-t-il pour nourrir 5000 hommes ?', options:['2','5','7','12'], answer:1, expl:'Jesus multiplia 5 pains et 2 poissons pour 5000 hommes (Matthieu 14:17-21).'},
+      {q:'Sur quelle mer Jesus marcha-t-il ?', options:['Mer Rouge','Mer Morte','Lac de Galilee','Mer Mediterranee'], answer:2, expl:'Jesus marcha sur les eaux du lac de Galilee (Matthieu 14:25).'}
+    ]},
+      {q:'Combien de jours Jesus jeuna-t-il dans le desert ?', options:['20 jours','30 jours','40 jours','50 jours'], answer:2, expl:'Jesus jeuna quarante jours et quarante nuits (Matthieu 4:2).'},
+      {q:'Combien de tentations Satan presenta-t-il a Jesus ?', options:['1','2','3','4'], answer:2, expl:'Satan presenta trois tentations a Jesus dans le desert (Matthieu 4:1-11).'},
+      {q:'Quel etait le metier de Pierre et Andre avant de suivre Jesus ?', options:['Charpentiers','Pecheurs','Percepteurs d impots','Bergers'], answer:1, expl:'Pierre et Andre etaient pecheurs sur le lac de Galilee (Matthieu 4:18).'},
+      {q:'Comment s appelait le disciple percepteur d impots ?', options:['Simon','Jacques','Matthieu','Philippe'], answer:2, expl:'Jesus vit Matthieu assis au bureau des taxes (Matthieu 9:9).'},
+      {q:'Quelle est la premiere Beatitude selon Matthieu 5 ?', options:['Heureux les doux','Heureux les misericordieux','Heureux les pauvres en esprit','Heureux ceux qui pleurent'], answer:2, expl:'La premiere Beatitude : Heureux les pauvres en esprit (Matthieu 5:3).'},
+      {q:'Combien de personnes Jesus nourrit-il lors du deuxieme miracle de multiplication ?', options:['3000','4000','5000','7000'], answer:1, expl:'Jesus nourrit 4000 hommes lors du deuxieme miracle (Matthieu 15:38).'},
+      {q:'Qui apparut aux cotes de Jesus lors de la Transfiguration ?', options:['Abraham et Isaac','Moise et Elie','David et Salomon','Pierre et Jean'], answer:1, expl:'Moise et Elie apparurent et s entretinrent avec Jesus (Matthieu 17:3).'},
+      {q:'Combien de temps la femme souffrant d hemorrhagie etait-elle malade ?', options:['3 ans','5 ans','12 ans','20 ans'], answer:2, expl:'Une femme souffrait d hemorrhagie depuis 12 ans (Matthieu 9:20).'},
+      {q:'Quel miracle Lazare subit-il ?', options:['Il fut gueri de la lepre','Il fut ressuscite apres 4 jours','Il recouvra la vue','Il marcha sur l eau'], answer:1, expl:'Jesus ressuscita Lazare qui etait mort depuis 4 jours (Jean 11:39-44).'},
+      {q:'Quel percepteur d impots restitua quatre fois ce qu il avait vole ?', options:['Matthieu','Zachee','Bartimee','Nicodeme'], answer:1, expl:'Zachee dit qu il restituait quatre fois ce qu il avait pris injustement (Luc 19:8).'},
+  { id:'passion', name:'Golgotha', icon:'\u271D', desc:'La Passion et la Resurrection', verse:'"Je suis la resurrection et la vie."', verseRef:'Jean 11:25',
+    questions:[
+      {q:'Pour combien de pieces d\'argent Judas trahit-il Jesus ?', options:['10','20','30','50'], answer:2, expl:'Judas recut trente pieces d\'argent pour livrer Jesus (Matthieu 26:15).'},
+      {q:'Qui porta la croix de Jesus jusqu\'au Golgotha ?', options:['Jean','Simon de Cyrene','Pierre','Nicodeme'], answer:1, expl:'Simon de Cyrene fut contraint de porter la croix de Jesus (Matthieu 27:32).'},
+      {q:'Combien de jours apres sa mort Jesus ressuscita-t-il ?', options:['Le lendemain','Deux jours apres','Le troisieme jour','Une semaine apres'], answer:2, expl:'Jesus ressuscita le troisieme jour selon les Ecritures (1 Corinthiens 15:4).'},
+      {q:'Qui fut la premiere personne a voir le tombeau vide ?', options:['Pierre','Jean','Marie-Madeleine','Thomas'], answer:2, expl:'Marie-Madeleine se rendit au tombeau de grand matin (Jean 20:1).'},
+      {q:'Combien de jours Jesus apparut-il a ses disciples apres sa resurrection ?', options:['3 jours','7 jours','40 jours','50 jours'], answer:2, expl:'Jesus se montra vivant apres sa passion pendant quarante jours (Actes 1:3).'}
+    ]},
+      {q:'Dans quel jardin Jesus pria-t-il avant son arrestation ?', options:['Jardin d Eden','Jardin de Gethsemane','Jardin de Joseph d Arimathee','Jardin royal'], answer:1, expl:'Jesus alla avec ses disciples dans un lieu appele Gethsemane (Matthieu 26:36).'},
+      {q:'Quel disciple coupa l oreille du serviteur du grand sacrificateur ?', options:['Jacques','Jean','Pierre','Andre'], answer:2, expl:'Pierre tira son epee et coupa l oreille droite de Malchus (Jean 18:10).'},
+      {q:'Combien de fois Pierre renia-t-il Jesus ?', options:['1 fois','2 fois','3 fois','4 fois'], answer:2, expl:'Pierre renia Jesus trois fois avant que le coq chante (Matthieu 26:75).'},
+      {q:'Que fit Pilate pour signifier son innocence ?', options:['Il pria','Il se lava les mains','Il pleura','Il s en alla'], answer:1, expl:'Pilate prit de l eau et se lava les mains devant la foule (Matthieu 27:24).'},
+      {q:'Que se passa-t-il dans le temple a la mort de Jesus ?', options:['Le feu descendit','Le voile du temple se dechira','Un tremblement de terre seulement','Les lumieres s eteignirent'], answer:1, expl:'Le voile du temple se dechira en deux depuis le haut jusqu en bas (Matthieu 27:51).'},
+      {q:'Qui demanda le corps de Jesus a Pilate ?', options:['Jean','Nicodeme','Joseph d Arimathee','Marie-Madeleine'], answer:2, expl:'Joseph d Arimathee demanda a Pilate le corps de Jesus (Matthieu 27:57-58).'},
+      {q:'A quelle heure Jesus mourut-il selon Marc 15 ?', options:['La troisieme heure','La sixieme heure','La neuvieme heure','La douzieme heure'], answer:2, expl:'Jesus expira a la neuvieme heure soit 15h (Marc 15:34-37).'},
+      {q:'Quel disciple refusa de croire a la resurrection sans voir Jesus ?', options:['Pierre','Jean','Philippe','Thomas'], answer:3, expl:'Thomas dit : Si je ne vois pas la marque des clous je ne croirai pas (Jean 20:25).'},
+      {q:'Que dit Jesus en mourant sur la croix selon Jean 19:30 ?', options:['Mon Dieu pourquoi m as-tu abandonne','Pere pardonne-leur','Tout est accompli','Pere je remets mon esprit'], answer:2, expl:'Quand Jesus eut pris le vinaigre il dit : Tout est accompli (Jean 19:30).'},
+      {q:'A quel moment de la semaine Jesus ressuscita-t-il ?', options:['Le vendredi soir','Le samedi matin','Le dimanche a l aube','Le lundi matin'], answer:2, expl:'Le premier jour de la semaine, de grand matin, les femmes vinrent au tombeau (Luc 24:1).'},
+  { id:'pentecote', name:'Sion', icon:'\u{1F525}', desc:'La Pentecote', verse:'"Vous recevrez une puissance, le Saint-Esprit survenant sur vous."', verseRef:'Actes 1:8',
+    questions:[
+      {q:'Combien de personnes se convertirent lors de la Pentecote ?', options:['120','500','3000','5000'], answer:2, expl:'Environ trois mille personnes se joignirent aux disciples ce jour-la (Actes 2:41).'},
+      {q:'Sous quelle forme le Saint-Esprit descendit-il a la Pentecote ?', options:['Une colombe','Langues de feu','Un vent violent et des langues de feu','Une nuee'], answer:2, expl:'Un bruit de vent, puis des langues de feu se poserent sur chacun (Actes 2:2-3).'},
+      {q:'Quel apotre precha le premier sermon a la Pentecote ?', options:['Jean','Paul','Pierre','Jacques'], answer:2, expl:'Pierre se leva et adressa la parole a la foule (Actes 2:14).'},
+      {q:'Combien de disciples etaient reunis au moment de la Pentecote ?', options:['12','72','120','500'], answer:2, expl:'La reunion comprenait environ cent vingt personnes (Actes 1:15).'},
+      {q:'En quelle langue les disciples commencerent-ils a parler a la Pentecote ?', options:['En latin','En grec','En langues etrangeres diverses','En arameen'], answer:2, expl:'Ils commencerent a parler en d\'autres langues selon que l\'Esprit leur donnait de s\'exprimer (Actes 2:4).'}
+    ]},
+      {q:'Dans quelle ville les disciples se reunirent-ils pour la Pentecote ?', options:['Bethlehem','Nazareth','Jerusalem','Capernaum'], answer:2, expl:'Les disciples etaient reunis a Jerusalem au moment de la Pentecote (Actes 2:1).'},
+      {q:'Combien de jours apres la resurrection la Pentecote eut-elle lieu ?', options:['40 jours','50 jours','60 jours','70 jours'], answer:1, expl:'La Pentecote eut lieu 50 jours apres la resurrection.'},
+      {q:'Quel prophete Pierre cita-t-il lors de son sermon de la Pentecote ?', options:['Esaie','Jeremie','Joel','Amos'], answer:2, expl:'Pierre cita le prophete Joel : Dans les derniers jours je repandrai mon Esprit (Actes 2:17).'},
+      {q:'Que firent les premiers chretiens apres la Pentecote selon Actes 2 ?', options:['Ils se disperserent','Ils persevererent dans l enseignement la communion et la priere','Ils attendirent','Ils allerent en mission immediate'], answer:1, expl:'Ils persevererent dans l enseignement des apotres et la fraction du pain (Actes 2:42).'},
+      {q:'Comment la communaute chretienne primitive gerait-elle ses biens ?', options:['Chacun pour soi','Ils mettaient tout en commun','Ils donnaient 10%','Ils ne possedaient rien'], answer:1, expl:'Tous ceux qui croyaient mettaient tout en commun (Actes 2:44).'},
+      {q:'Quel couple mourut apres avoir menti aux apotres sur leur don ?', options:['Priscille et Aquilas','Ananias et Sapphire','Philemon et Apphie','Andronicus et Junia'], answer:1, expl:'Ananias et Sapphire moururent apres avoir menti au Saint-Esprit (Actes 5).'},
+      {q:'Combien d hommes furent choisis pour servir les veuves dans l eglise primitive ?', options:['3','5','7','12'], answer:2, expl:'Sept hommes de bonne reputation remplis d Esprit furent choisis (Actes 6:3).'},
+      {q:'Qui fut le premier martyr chretien mentionne dans les Actes ?', options:['Jacques','Pierre','Etienne','Paul'], answer:2, expl:'Etienne rempli de grace et de puissance fut lapide et devint le premier martyr (Actes 6-7).'},
+      {q:'Quel boiteux Pierre et Jean guerirent-ils apres la Pentecote ?', options:['Un homme de 38 ans','Un homme boiteux depuis sa naissance a la porte du Temple','Lazare','Un aveugle-ne'], answer:1, expl:'Un homme boiteux depuis sa naissance etait assis a la Belle Porte du Temple (Actes 3:2).'},
+      {q:'Quelle fete juive coincide avec la Pentecote chretienne ?', options:['Yom Kippour','Pessah','Chavouot','Soukkot'], answer:2, expl:'La Pentecote chretienne coincide avec Chavouot, la fete des premieres moissons.'},
+  { id:'paul', name:'Damas', icon:'\u{1F4DC}', desc:'Paul et les Epitres', verse:'"Je puis tout par Christ qui me fortifie."', verseRef:'Philippiens 4:13',
+    questions:[
+      {q:'Quel etait le nom de Paul avant sa conversion ?', options:['Barnabas','Silas','Saul','Timothee'], answer:2, expl:'Saul de Tarse devint Paul apres sa rencontre avec Jesus sur le chemin de Damas (Actes 9).'},
+      {q:'Sur quel chemin Paul eut-il sa vision de Jesus ressuscite ?', options:['Chemin de Jerusalem','Chemin de Damas','Chemin de Rome','Chemin de Corinthe'], answer:1, expl:'Paul fut aveugle par une lumiere sur le chemin de Damas (Actes 9:3).'},
+      {q:'Combien d\'epitres de Paul sont dans le Nouveau Testament ?', options:['7','10','13','15'], answer:2, expl:'13 epitres sont traditionnellement attribuees a l\'apotre Paul.'},
+      {q:'Dans quelle ville Paul et Silas furent-ils emprisonnes et liberes miraculeusement ?', options:['Ephese','Corinthe','Philippes','Thessalonique'], answer:2, expl:'A Philippes, un tremblement de terre ouvrit les portes de la prison (Actes 16:26).'},
+      {q:'Quelle est la plus longue epitre de Paul ?', options:['1 Corinthiens','Romains','Galates','Ephesiens'], answer:1, expl:'L\'epitre aux Romains est la plus longue des epitres pauliniennes.'}
+    ]},
+      {q:'Dans quelle ville Paul etait-il ne ?', options:['Jerusalem','Antioche','Tarse','Damas'], answer:2, expl:'Paul etait ne a Tarse en Cilicie (Actes 21:39).'},
+      {q:'A quel rabbin Paul avait-il ete forme ?', options:['Hillel','Shammai','Gamliel','Akiba'], answer:2, expl:'Paul fut instruit aux pieds de Gamliel (Actes 22:3).'},
+      {q:'Combien de voyages missionnaires Paul accomplit-il ?', options:['2','3','4','5'], answer:1, expl:'Les Actes decrivent trois grands voyages missionnaires de Paul.'},
+      {q:'A Lystre pour qui les habitants prirent-ils Paul et Barnabas ?', options:['Des prophetes','Des rois','Des dieux grecs','Des anges'], answer:2, expl:'Les habitants de Lystre appelerent Barnabas Zeus et Paul Hermes (Actes 14:12).'},
+      {q:'Quel est le theme central de l epitre aux Galates ?', options:['La resurrection','La justification par la foi seule','Le retour de Christ','La generosite'], answer:1, expl:'L epitre aux Galates defend la justification par la foi seule.'},
+      {q:'Sur quelle ile Paul fit-il naufrage lors de son voyage a Rome ?', options:['Chypre','Crete','Malte','Sicile'], answer:2, expl:'Apres le naufrage Paul et ses compagnons aborderent a Malte (Actes 28:1).'},
+      {q:'Combien d annees Paul fut-il en prison a Rome ?', options:['1 an','2 ans','3 ans','5 ans'], answer:1, expl:'Paul resta deux ans entiers dans une maison louee a Rome (Actes 28:30).'},
+      {q:'Quel compagnon Paul appelle son fils bien-aime dans ses epitres ?', options:['Tite','Silas','Timothee','Epaphras'], answer:2, expl:'Paul appelle Timothee son fils bien-aime et fidele dans le Seigneur (1 Corinthiens 4:17).'},
+      {q:'Quel est le fruit de l Esprit selon Galates 5 ?', options:['Foi esperance et charite','Amour joie paix patience bonte fidelite douceur et maitrise de soi','Sagesse intelligence et connaissance','Prophetie guerison et langues'], answer:1, expl:'Le fruit de l Esprit est amour joie paix... (Galates 5:22-23).'},
+      {q:'Quelle ile Paul evangelisa-t-il en premier voyage ?', options:['Chypre','Crete','Malte','Rhodes'], answer:0, expl:'Paul et Barnabas commencerent leur premier voyage par Chypre (Actes 13:4).'},
+  { id:'apocalypse', name:'Patmos', icon:'\u{1F4D6}', desc:'L\'Apocalypse', verse:'"Je suis l\'Alpha et l\'Omega."', verseRef:'Apocalypse 1:8',
+    questions:[
+      {q:'Qui ecrivit le livre de l\'Apocalypse ?', options:['Paul','Pierre','Jean','Matthieu'], answer:2, expl:'Jean recut cette revelation sur l\'ile de Patmos (Apocalypse 1:9).'},
+      {q:'A combien d\'Eglises Jean ecrivit-il dans l\'Apocalypse ?', options:['3','5','7','12'], answer:2, expl:'Jean ecrivit aux sept Eglises d\'Asie (Apocalypse 1:4).'},
+      {q:'Combien de sceaux contient le livre de l\'Apocalypse ?', options:['4','6','7','12'], answer:2, expl:'L\'Agneau ouvrit les sept sceaux du livre (Apocalypse 6-8).'},
+      {q:'Quelle est la valeur du nombre de la Bete dans l\'Apocalypse ?', options:['444','616','666','777'], answer:2, expl:'Le nombre de la bete est six cent soixante-six (Apocalypse 13:18).'},
+      {q:'Combien d\'annees durera le regne de Christ selon Apocalypse 20 ?', options:['100 ans','500 ans','1000 ans','L\'eternite'], answer:2, expl:'L\'Apocalypse parle d\'un regne de mille ans (Apocalypse 20:4).'}
+    ]},
+      {q:'Sur quelle ile Jean recut-il la revelation ?', options:['Chypre','Crete','Patmos','Rhodes'], answer:2, expl:'Jean etait dans l ile appelee Patmos (Apocalypse 1:9).'},
+      {q:'Quel jour Jean recut-il la vision de l Apocalypse ?', options:['Le vendredi','Le samedi','Le dimanche (jour du Seigneur)','Le jeudi'], answer:2, expl:'Jean fut saisi par l Esprit le jour du Seigneur (Apocalypse 1:10).'},
+      {q:'Quelle est la premiere Eglise mentionnee dans l Apocalypse ?', options:['Smyrne','Ephese','Pergame','Thyatire'], answer:1, expl:'La premiere des sept Eglises est celle d Ephese (Apocalypse 2:1).'},
+      {q:'Quelle Eglise est decrite comme ni froide ni chaude ?', options:['Laodicee','Sardes','Pergame','Philadelphie'], answer:0, expl:'L Eglise de Laodicee est ni froide ni chaude (Apocalypse 3:16).'},
+      {q:'Combien de trones y a-t-il autour du trone de Dieu dans Apocalypse 4 ?', options:['7','12','24','72'], answer:2, expl:'Vingt-quatre trones entouraient le trone de Dieu (Apocalypse 4:4).'},
+      {q:'Combien d anges soufflent des trompettes dans l Apocalypse ?', options:['4','6','7','12'], answer:2, expl:'Sept anges soufflent sept trompettes (Apocalypse 8:2).'},
+      {q:'Comment s appelle la cite celeste decrite a la fin de l Apocalypse ?', options:['La Nouvelle Babylone','La Nouvelle Jerusalem','Le Paradis d Eden','La Cite Eternelle'], answer:1, expl:'Jean vit descendre du ciel la nouvelle Jerusalem (Apocalypse 21:2).'},
+      {q:'Que signifie Armageddon dans l Apocalypse ?', options:['Montagne du jugement','Montagne de Megiddo','Vallee des ossements','Cite du diable'], answer:1, expl:'Armageddon vient de Har Megiddo, la montagne de Megiddo (Apocalypse 16:16).'},
+      {q:'Combien de tetes a la bete sortant de la mer en Apocalypse 13 ?', options:['3','5','7','10'], answer:2, expl:'La bete avait sept tetes et dix cornes (Apocalypse 13:1).'},
+      {q:'Quelle est la derniere promesse de l Apocalypse ?', options:['Je suis l Alpha et l Omega','Je viens bientot','La grace soit avec vous','Amen viens Seigneur Jesus'], answer:1, expl:'Jesus dit : Oui je viens bientot (Apocalypse 22:20).'},
+  { id:'rome', name:'Rome', icon:'\u{1F3DB}', desc:'La Cite Eternelle', verse:'"Car je n\'ai pas honte de l\'Evangile."', verseRef:'Romains 1:16',
+    questions:[
+      {q:'Combien de livres contient la Bible (canon protestant) ?', options:['60','66','73','77'], answer:1, expl:'La Bible protestante compte 66 livres : 39 dans l\'Ancien Testament, 27 dans le Nouveau.'},
+      {q:'Quel est le livre le plus court de la Bible ?', options:['Ruth','Abdias','3 Jean','Philemon'], answer:2, expl:'3 Jean est le livre le plus court avec seulement 14 versets.'},
+      {q:'Quel verset est souvent cite comme le plus court de la Bible ?', options:['"Dieu est amour"','Jesus pleura','Amen','Shalom'], answer:1, expl:'"Jesus pleura" (Jean 11:35) est le verset le plus court en langue francaise.'},
+      {q:'En quelle langue l\'Ancien Testament fut-il principalement ecrit ?', options:['Latin','Grec','Hebreu','Arameen'], answer:2, expl:'L\'Ancien Testament est principalement ecrit en hebreu, avec quelques passages en arameen.'},
+      {q:'Quel apotre etait aussi pecheur de Galilee avant de suivre Jesus ?', options:['Paul','Matthieu','Pierre','Luc'], answer:2, expl:'Simon Pierre etait pecheur sur le lac de Galilee (Matthieu 4:18).'}
+    ]},
+      {q:'Combien de livres contient l Ancien Testament protestant ?', options:['36','39','42','46'], answer:1, expl:'L Ancien Testament protestant contient 39 livres.'},
+      {q:'Combien de livres contient le Nouveau Testament ?', options:['21','25','27','30'], answer:2, expl:'Le Nouveau Testament contient 27 livres.'},
+      {q:'Quel est le livre le plus long de la Bible ?', options:['Esaie','Les Psaumes','Jeremie','Genese'], answer:1, expl:'Le livre des Psaumes est le plus long de la Bible avec 150 psaumes.'},
+      {q:'En quelle langue le Nouveau Testament fut-il principalement ecrit ?', options:['Latin','Hebreu','Grec','Arameen'], answer:2, expl:'Le Nouveau Testament fut ecrit principalement en grec koine.'},
+      {q:'Qui traduisit la Bible en latin (Vulgate) ?', options:['Augustin','Origene','Jerome','Tertullien'], answer:2, expl:'Saint Jerome traduisit la Bible en latin, donnant la Vulgate.'},
+      {q:'Combien de chapitres la Bible contient-elle au total ?', options:['1000','1189','1400','1600'], answer:1, expl:'La Bible contient exactement 1189 chapitres au total.'},
+      {q:'Quel est le verset le plus cite du Nouveau Testament ?', options:['Jean 1:1','Jean 3:16','Romains 8:28','Matthieu 28:19'], answer:1, expl:'Jean 3:16 est le verset le plus connu du Nouveau Testament.'},
+      {q:'En quelle annee la Bible fut-elle traduite en francais par Olivetan ?', options:['1450','1535','1611','1789'], answer:1, expl:'Pierre Robert Olivetan publia sa traduction française de la Bible en 1535.'},
+      {q:'Combien de versets contient la Bible environ ?', options:['23000','31000','40000','50000'], answer:1, expl:'La Bible contient environ 31 000 versets selon les editions.'},
+      {q:'Quel roi commanda la traduction de la Bible dite King James ?', options:['Henri VIII','Elisabeth I','Jacques Ier','Charles II'], answer:2, expl:'La Bible King James fut commandee par le roi Jacques Ier en 1604.'}
+];
+
+var T2 = [
+  { id:'femmes1', name:'Les Heroines', icon:'\u{1F338}', desc:'Femmes de l\'Ancien Testament', verse:'"La femme vertueuse, qui la trouvera ?"', verseRef:'Proverbes 31:10',
+    questions:[
+      {q:'Quelle femme fut choisie par Dieu pour etre l\'epouse d\'Isaac ?', options:['Lea','Rebecca','Rachel','Zilpa'], answer:1, expl:'Rebecca fut choisie par le serviteur d\'Abraham pour epouser Isaac (Genese 24).'},
+      {q:'Quelle femme cacha les espions envoyes par Josue a Jericho ?', options:['Deborah','Rahab','Abigail','Rut'], answer:1, expl:'Rahab cacha les deux espions d\'Israel sur son toit (Josue 2:6).'},
+      {q:'Quelle juge d\'Israel accompagna Barak a la guerre ?', options:['Rut','Ester','Deborah','Anne'], answer:2, expl:'Deborah, prophetesse et juge, accompagna Barak contre Sisara (Juges 4).'},
+      {q:'Quelle femme dit a sa belle-mere : "Ou tu iras j\'irai" ?', options:['Orpa','Naomi','Rut','Rahab'], answer:2, expl:'Rut pronon\u00e7a ces paroles celebres de fidelite a Naomi (Rut 1:16).'},
+      {q:'Quelle reine risqua sa vie pour sauver son peuple d\'un genocide ?', options:['Jezabel','Michol','Ester','Abigail'], answer:2, expl:'Ester s\'approcha du roi sans etre convoquee pour sauver les Juifs (Ester 5).'}
+    ]},
+      {q:'Quelle femme de la Bible fut juge d Israel ?', options:['Rut','Rahab','Deborah','Abigail'], answer:2, expl:'Deborah etait prophetesse et juge d Israel (Juges 4:4).'},
+      {q:'Combien de maris Rut eut-elle au total ?', options:['1','2','3','4'], answer:1, expl:'Rut eut deux maris : Mahlon puis Boaz (Rut 1:4 et 4:13).'},
+      {q:'Qui etait le mari de Deborah ?', options:['Barak','Lapidoth','Sisara','Kenaz'], answer:1, expl:'Deborah etait femme de Lapidoth (Juges 4:4).'},
+      {q:'Quelle femme tua le general Sisara avec un piquet de tente ?', options:['Deborah','Abigail','Jahel','Rahab'], answer:2, expl:'Jahel prit un piquet de tente et le planta dans la tempe de Sisara (Juges 4:21).'},
+      {q:'Comment s appelait le mari de Rut dans le livre de Rut ?', options:['Elimelec','Mahlon','Boaz','Tob'], answer:2, expl:'Boaz, homme puissant et riche, devint le mari de Rut (Rut 4:13).'},
+      {q:'Quel etait le lien de parente entre Naomi et Boaz ?', options:['Frere','Cousin','Parent proche (goel)','Aucun'], answer:2, expl:'Boaz etait un parent proche de la famille d Elimelec, le mari de Naomi (Rut 2:3).'},
+      {q:'Dans quel pays Ester devint-elle reine ?', options:['Babylone','Perse','Egypte','Assyrie'], answer:1, expl:'Ester devint reine de Perse a la place de la reine Vasthi (Ester 2:17).'},
+      {q:'Quel etait le nom hébreu d Ester ?', options:['Hadassa','Deborah','Miriam','Zippora'], answer:0, expl:'Ester avait pour nom hébreu Hadassa (Ester 2:7).'},
+      {q:'Qui eleva Ester apres la mort de ses parents ?', options:['Naomi','Mardochee son cousin','Un pretre','Le roi'], answer:1, expl:'Mardochee, son cousin, l avait adoptee comme sa fille (Ester 2:7).'},
+      {q:'Combien de jours Ester jeuna-t-elle avant d aller voir le roi ?', options:['1 jour','3 jours','7 jours','40 jours'], answer:1, expl:'Ester demanda a tous de ne pas manger ni boire pendant trois jours (Ester 4:16).'},
+  { id:'femmes2', name:'Marie', icon:'\u2728', desc:'Marie et les femmes du NT', verse:'"Je suis la servante du Seigneur."', verseRef:'Luc 1:38',
+    questions:[
+      {q:'Combien de temps Marie resta-t-elle chez sa cousine Elisabeth ?', options:['7 jours','1 mois','3 mois','6 mois'], answer:2, expl:'Marie demeura environ trois mois chez Elisabeth (Luc 1:56).'},
+      {q:'Quelle femme reconnut l\'enfant Jesus au Temple comme le Messie ?', options:['Anne','Elisabeth','Salome','Priscille'], answer:0, expl:'Anne, prophetesse de 84 ans, rendit graces a Dieu pour l\'enfant Jesus (Luc 2:36-38).'},
+      {q:'Quelle femme oignit les pieds de Jesus avec du parfum precieux ?', options:['Marthe','Marie de Bethanie','Marie-Madeleine','Salome'], answer:1, expl:'Marie de Bethanie oignit les pieds de Jesus avec un parfum de grand prix (Jean 12:3).'},
+      {q:'De combien de demons Jesus delivra-t-il Marie-Madeleine ?', options:['3','5','7','12'], answer:2, expl:'Jesus chassa sept demons de Marie-Madeleine (Luc 8:2).'},
+      {q:'Quelle femme dans les Actes etait connue pour ses oeuvres de charite ?', options:['Lydie','Priscille','Tabitha','Phebe'], answer:2, expl:'Tabitha (Dorcas) etait remplie de bonnes oeuvres et d\'aumones (Actes 9:36).'}
+    ]},
+      {q:'Comment s appelait la mere de Samson ?', options:['Deborah','Une femme de Tsora dont le nom n est pas cite','Dalila','Abigail'], answer:1, expl:'La mere de Samson est une femme de Tsora dont le nom n est pas precise dans la Bible (Juges 13).'},
+      {q:'Quelle femme enceinte visita Marie apres l Annonciation ?', options:['Anne','Salome','Elisabeth','Marie de Bethanie'], answer:2, expl:'Marie se rendit chez Elisabeth sa cousine qui etait enceinte de Jean Baptiste (Luc 1:39-40).'},
+      {q:'Quelle femme penitente oignit les pieds de Jesus et les essuya avec ses cheveux ?', options:['Marie de Bethanie','Marie-Madeleine','Marthe','Une pécheresse anonyme'], answer:3, expl:'Une femme pecheresse oignit les pieds de Jesus et les essuya avec ses cheveux (Luc 7:37-38).'},
+      {q:'Quelle femme de la Bible chercha Dieu la nuit et trouva son bien-aime ?', options:['Rut','La Sulamite dans le Cantique des cantiques','Marie-Madeleine','Ester'], answer:1, expl:'La Sulamite du Cantique des cantiques chercha celui qu elle aime pendant la nuit (Cantique 3:1).'},
+      {q:'Quelle femme dans Jean 4 discuta avec Jesus au puits de Jacob ?', options:['Marie-Madeleine','Une Samaritaine','Marie de Bethanie','Marthe'], answer:1, expl:'Jesus s entretint avec une Samaritaine au puits de Jacob (Jean 4:7).'},
+      {q:'Combien de maris la Samaritaine avait-elle eus selon Jesus ?', options:['3','4','5','6'], answer:2, expl:'Jesus lui dit : Tu as eu cinq maris (Jean 4:18).'},
+      {q:'Quelle femme de Corinthe Paul baptisa-t-il en premier ?', options:['Priscille','Phoebe','Chloe','Stephanas'], answer:0, expl:'Paul baptisa la famille de Stephanas a Corinthe, et Priscille y vivait (Actes 18).'},
+      {q:'Quelle diaconesse Paul mentionne-t-il dans Romains 16 ?', options:['Lydie','Priscille','Phoebe','Tabitha'], answer:2, expl:'Paul recommande Phoebe, diaconesse de l eglise de Cencrees (Romains 16:1).'},
+      {q:'Quelle femme de l Ancien Testament priait tellement qu Eli la prit pour une ivrogne ?', options:['Deborah','Rahab','Anne mere de Samuel','Abigail'], answer:2, expl:'Anne priait avec larmes, ses levres remuaient sans qu on entende de voix, et Eli crut qu elle etait ivre (1 Samuel 1:13).'},
+      {q:'Quel fils Anne demanda-t-elle a Dieu dans sa priere ?', options:['David','Samuel','Salomon','Elie'], answer:1, expl:'Anne demanda un fils a Dieu et promit de le consacrer a l Eternel. Ce fils fut Samuel (1 Samuel 1:11).'},
+  { id:'femmes3', name:'Proverbes 31', icon:'\u{1F451}', desc:'La Femme Vertueuse', verse:'"Elle ouvre la bouche avec sagesse."', verseRef:'Proverbes 31:26',
+    questions:[
+      {q:'Quelle femme convainquit Samson de lui reveler le secret de sa force ?', options:['Rahab','Dalila','Jezabel','Atalie'], answer:1, expl:'Dalila obtint de Samson qu\'il lui revele que sa force residait dans ses cheveux (Juges 16).'},
+      {q:'Quelle reine d\'Israel introduisit le culte de Baal ?', options:['Atalie','Jezabel','Michal','Tamar'], answer:1, expl:'Jezabel, femme d\'Achab, propagea le culte de Baal en Israel (1 Rois 16:31).'},
+      {q:'Quelle femme vint de loin pour eprouver la sagesse de Salomon ?', options:['La reine d\'Egypte','La reine de Saba','La reine de Perse','Rahab'], answer:1, expl:'La reine de Saba vint eprouver Salomon par des enigmes (1 Rois 10:1).'},
+      {q:'Quelle femme chez qui Paul sejournait etait teinturiere de pourpre ?', options:['Priscille','Phebe','Lydie','Tabitha'], answer:2, expl:'Lydie, marchande de pourpre de Thyatire, ouvrit son coeur et sa maison a Paul (Actes 16:14).'},
+      {q:'Quelle femme instruisit Apollos dans la voie de Dieu avec son mari ?', options:['Lydie','Priscille','Phebe','Tabitha'], answer:1, expl:'Priscille et Aquilas prirent Apollos a part et lui exposerent la voie de Dieu (Actes 18:26).'}
+    ]},
+      {q:'Quelle reine d Israel fut massacree et ses restes furent manges par les chiens ?', options:['Atalie','Jezabel','Vasthi','Michol'], answer:1, expl:'Jezabel fut jetee par la fenetre et les chiens mangerent sa chair (2 Rois 9:35-37).'},
+      {q:'Combien d annees Atalie regna-t-elle sur Juda ?', options:['3 ans','6 ans','10 ans','14 ans'], answer:1, expl:'Atalie regna six ans sur Juda avant d etre renversee (2 Rois 11:3).'},
+      {q:'Quelle femme sage sauva une ville en jetant une meule de moulin sur Abimelech ?', options:['Deborah','Jahel','Une femme de Tebets dont le nom n est pas donne','Abigail'], answer:2, expl:'Une femme de Tebets jeta une meule sur la tete d Abimelech (Juges 9:53).'},
+      {q:'Quelle femme sage interceda aupres de David pour sauver son mari Nabal ?', options:['Abigail','Michol','Bathsabee','Tamar'], answer:0, expl:'Abigail se hata d aller a la rencontre de David pour detourner sa colere (1 Samuel 25:23).'},
+      {q:'Quel etait le metier de Rahab a Jericho ?', options:['Marchande','Prophetesse','Prostituee','Sage-femme'], answer:2, expl:'Rahab etait une prostituee qui cacha les espions d Israel (Josue 2:1).'},
+      {q:'Rahab est mentionnee dans quelle liste importante du Nouveau Testament ?', options:['Les diaconesses','La genealogie de Jesus','Les femmes prophetes','Les diaconesses'], answer:1, expl:'Rahab est dans la genealogie de Jesus-Christ en Matthieu 1:5.'},
+      {q:'Quelle femme de la Bible est decrite comme plus sage que les hommes de son temps ?', options:['La reine de Saba','Deborah','La femme vertueuse de Proverbes 31','Abigail'], answer:2, expl:'La femme vertueuse de Proverbes 31 surpasse toutes les autres en sagesse et en valeur.'},
+      {q:'Quel parfum Lydie vendait-elle a Philippes ?', options:['Myrrhe','Pourpre (teinture)','Nard','Encens'], answer:1, expl:'Lydie etait marchande de pourpre, tissu de couleur violette tres precieux (Actes 16:14).'},
+      {q:'Dans quel pays etait originaire Lydie de Philippes ?', options:['Macedoine','Thyatire en Asie Mineure','Corinthe','Ephese'], answer:1, expl:'Lydie etait originaire de Thyatire en Asie Mineure (Actes 16:14).'},
+      {q:'Quelle soeur de Moise prophétisa apres la traversee de la mer Rouge ?', options:['Zippora','Miriam','Deborah','Abigail'], answer:1, expl:'Miriam la prophetesse prit un tambourin et les femmes danserent derriere elle (Exode 15:20).'}
+];
+
+var T3 = [
+  { id:'esaie', name:'Juda', icon:'\u{1F4EF}', desc:'Esaie, le prophete messianique', verse:'"Un enfant nous est ne, un fils nous est donne."', verseRef:'Esaie 9:6',
+    questions:[
+      {q:'Combien d\'annees Esaie prophetisa-t-il selon son livre ?', options:['20 ans','40 ans','60 ans','Plus de 60 ans'], answer:3, expl:'Esaie prophetisa sous 4 rois, couvrant plus de 60 ans de ministere (Esaie 1:1).'},
+      {q:'Quelle vision inaugura le ministere d\'Esaie ?', options:['Un char de feu','Le trone de Dieu entoure de seraphins','Une vallee d\'ossements','Un buisson ardent'], answer:1, expl:'Esaie vit le Seigneur assis sur un trone eleve, entoure de seraphins (Esaie 6).'},
+      {q:'Combien de chapitres contient le livre d\'Esaie ?', options:['39','52','66','72'], answer:2, expl:'Le livre d\'Esaie contient 66 chapitres, comme les 66 livres de la Bible.'},
+      {q:'Quelle nation Dieu utilisa-t-il comme instrument de jugement selon Esaie ?', options:['L\'Egypte','La Perse','L\'Assyrie','Rome'], answer:2, expl:'Dieu appela l\'Assyrie "le baton de sa colere" (Esaie 10:5).'},
+      {q:'Quel roi persan Esaie nomma-t-il par prophetie 150 ans avant sa naissance ?', options:['Darius','Artaxerxes','Cyrus','Xerxes'], answer:2, expl:'Esaie nomma Cyrus comme celui qui permettrait le retour des exiles (Esaie 44:28).'}
+    ]},
+      {q:'Que dit Esaie quand il vit la gloire de Dieu dans le temple ?', options:['Je suis pret envoie-moi','Malheur a moi je suis perdu car je suis un homme aux levres impures','Gloire a Dieu au plus haut des cieux','Que votre nom soit sanctifie'], answer:1, expl:'Esaie dit : Malheur a moi ! je suis perdu, car je suis un homme aux levres impures (Esaie 6:5).'},
+      {q:'Avec quoi le seraphin purifia-t-il les levres d Esaie ?', options:['De l eau du Jourdain','Un charbon ardent','De l huile sainte','La parole de Dieu'], answer:1, expl:'Un seraphim toucha la bouche d Esaie avec un charbon ardent pris sur l autel (Esaie 6:6-7).'},
+      {q:'Quelle prophetie d Esaie decrit le Serviteur souffrant ?', options:['Esaie 7','Esaie 40','Esaie 53','Esaie 60'], answer:2, expl:'Esaie 53 decrit le Serviteur souffrant, que les chretiens voient accompli en Jesus.'},
+      {q:'Quelle celebre prophetie d Esaie parle d une vierge qui enfante ?', options:['Esaie 7:14','Esaie 9:6','Esaie 11:1','Esaie 40:3'], answer:0, expl:'La prophetie de la vierge se trouve en Esaie 7:14.'},
+      {q:'Quel signe Dieu donna-t-il au roi Ezechias quand il fut gueri ?', options:['Un arc-en-ciel','L ombre du cadran solaire recula de 10 degres','Une vision','La pluie apres la secheresse'], answer:1, expl:'L ombre du cadran solaire d Achaz recula de dix degres (Esaie 38:8).'},
+      {q:'Combien d annees Dieu ajouta-t-il a la vie d Ezechias apres sa priere ?', options:['5 ans','10 ans','15 ans','20 ans'], answer:2, expl:'Dieu dit a Ezechias : J ajouterai a ta vie quinze ans (Esaie 38:5).'},
+      {q:'Quel roi assyrien Esaie prophetisa-t-il que Dieu detruirait ?', options:['Nabuchodonosor','Sennacherib','Sargon','Teglath-Phalasar'], answer:1, expl:'Dieu promit de defendre Jerusalem contre Sennacherib roi d Assyrie (Esaie 37:33-36).'},
+      {q:'Combien de soldats assyriens Dieu fit-il perir en une nuit ?', options:['80 000','135 000','185 000','200 000'], answer:2, expl:'L ange de l Eternel frappa 185 000 hommes dans le camp assyrien (Esaie 37:36).'},
+      {q:'Quelle image Esaie utilise-t-il pour Dieu portant son peuple ?', options:['Un aigle qui porte ses petits','Un berger portant ses brebis','Un potier et l argile','Un pere et son fils'], answer:0, expl:'Esaie decrit Dieu portant Israel comme un aigle porte ses petits sur ses ailes (Esaie 40:31).'},
+      {q:'Quelle image Esaie 40 utilise-t-il pour decrire ceux qui esperent en l Eternel ?', options:['Ils marcheront sans se fatiguer','Ils voleront comme des aigles','Les deux','Ils seront forts comme des lions'], answer:2, expl:'Ceux qui esperent en l Eternel renouvellent leurs forces et volent comme des aigles (Esaie 40:31).'},
+  { id:'jeremie', name:'Anatoth', icon:'\u{1F4A7}', desc:'Jeremie, le prophete pleureur', verse:'"Je te connaissais avant que je t\'eusse forme."', verseRef:'Jeremie 1:5',
+    questions:[
+      {q:'Pourquoi Jeremie est-il appele le "prophete pleureur" ?', options:['Il pleurait lors des sacrifices','Il pleura la destruction de Jerusalem et l\'exil','Il avait une maladie des yeux','Il pleurait a chaque prophetie'], answer:1, expl:'Jeremie pleura la destruction de Jerusalem et ecrivit les Lamentations.'},
+      {q:'Combien d\'annees Jeremie prophetisa-t-il la captivite de Babylone ?', options:['40 ans','50 ans','70 ans','100 ans'], answer:2, expl:'Jeremie prophetisa 70 ans de captivite a Babylone (Jeremie 25:11).'},
+      {q:'Quel scribe ecrivit sous la dictee de Jeremie ?', options:['Esdras','Baruch','Nehemie','Ezra'], answer:1, expl:'Baruch fils de Neria ecrivit les propheties de Jeremie sous sa dictee (Jeremie 36:4).'},
+      {q:'Quel objet symbolique Jeremie acheta-t-il comme signe d\'esperance malgre le siege ?', options:['Un baton','Un champ a Anatoth','Une jarre d\'argile','Un joug de bois'], answer:1, expl:'Jeremie acheta un champ a Anatoth en signe que "des maisons seront rebaties" (Jeremie 32).'},
+      {q:'Dans quelle fosse Jeremie fut-il jete par ses ennemis ?', options:['Une citerne sans eau','Une prison de pierre','Un cachot souterrain','Un puits de Jerusalem'], answer:0, expl:'Jeremie fut jete dans une citerne vide et boueuse (Jeremie 38:6).'}
+    ]},
+      {q:'Quel age avait Jeremie quand il fut appele ?', options:['Il etait tres jeune (il dit : je suis un enfant)','Il avait 30 ans','Il avait 40 ans','La Bible ne precise pas'], answer:0, expl:'Jeremie dit a Dieu : Je ne sais pas parler, car je suis un enfant (Jeremie 1:6).'},
+      {q:'De quelle ville etait originaire Jeremie ?', options:['Jerusalem','Bethlehem','Anatoth','Ramah'], answer:2, expl:'Jeremie etait des sacrificateurs d Anatoth au pays de Benjamin (Jeremie 1:1).'},
+      {q:'Combien de livres composent les Lamentations attribuees a Jeremie ?', options:['3','4','5','6'], answer:2, expl:'Le livre des Lamentations contient 5 chapitres-poemes sur la destruction de Jerusalem.'},
+      {q:'Quel acte symbolique Jeremie fit-il avec une ceinture de lin ?', options:['Il la brula','Il l enterra pres de l Euphrate ou elle se deteriora','Il la donna au roi','Il l offrit au temple'], answer:1, expl:'Jeremie enterra une ceinture de lin pres de l Euphrate. Elle etait gatee, image de la corruption d Israel (Jeremie 13).'},
+      {q:'Quelle nouvelle alliance Jeremie prophetisa-t-il ?', options:['Une alliance ecrite sur des tables de pierre','Une alliance ecrite dans les coeurs','Une alliance basee sur les sacrifices','Une alliance avec les nations'], answer:1, expl:'Dieu dit par Jeremie : Je mettrai ma loi au-dedans d eux, je l ecrirai dans leur coeur (Jeremie 31:33).'},
+      {q:'Quel roi de Babylone Dieu appela-t-il son serviteur dans Jeremie ?', options:['Darius','Cyrus','Nabuchodonosor','Beltsatsar'], answer:2, expl:'Dieu appela Nabuchodonosor mon serviteur pour executer son jugement (Jeremie 25:9).'},
+      {q:'Que fit le roi Jojakim du rouleau de propheties de Jeremie ?', options:['Il le garda precieusement','Il le mit au temple','Il le brula colonne par colonne','Il le remit a Baruch'], answer:2, expl:'Le roi Jojakim coupa le rouleau avec un canif et le jeta au feu (Jeremie 36:23).'},
+      {q:'Quel Ethiopien sauva Jeremie de la citerne ?', options:['Baruch','Ebed-Melec','Recab','Gedalias'], answer:1, expl:'Ebed-Melec l Ethiopien interceda pour Jeremie et le sortit de la citerne (Jeremie 38:7-13).'},
+      {q:'Que demanda Nebuzaradan chef de la garde a Jeremie apres la chute de Jerusalem ?', options:['De venir a Babylone','De rester en Judee ou d aller a Babylone','De servir au temple','De prophetiser pour le roi'], answer:1, expl:'Nebuzaradan laissa Jeremie choisir entre aller a Babylone ou rester en Judee (Jeremie 40:4-5).'},
+      {q:'Qu est-ce que Jeremie acheta a Anatoth comme signe de la restauration future ?', options:['Un terrain agricole','Un champ','Une maison','Un vignoble'], answer:1, expl:'Jeremie acheta un champ a Anatoth comme signe que des terres seront de nouveau achetees en Israel (Jeremie 32:9).'},
+  { id:'daniel', name:'Babylone', icon:'\u{1F981}', desc:'Daniel, fidele en exil', verse:'"Mon Dieu a envoye son ange."', verseRef:'Daniel 6:22',
+    questions:[
+      {q:'Combien de compagnons Daniel avait-il a Babylone ?', options:['2','3','5','7'], answer:1, expl:'Daniel avait trois compagnons : Shadrak, Meshak et Abed-Nego (Daniel 1:6-7).'},
+      {q:'Dans quelle fosse Daniel fut-il jete ?', options:['Une fosse de serpents','La fosse aux lions','Un four ardent','Un cachot'], answer:1, expl:'Daniel fut jete dans la fosse aux lions pour avoir prie malgre l\'interdiction (Daniel 6).'},
+      {q:'Qui fut jete dans la fournaise ardente a la place de Daniel ?', options:['Daniel lui-meme','Ses trois compagnons','Le roi','Ses serviteurs'], answer:1, expl:'Shadrak, Meshak et Abed-Nego furent jetes dans la fournaise (Daniel 3).'},
+      {q:'Combien de chapitres le livre de Daniel contient-il ?', options:['8','10','12','14'], answer:2, expl:'Le livre de Daniel contient 12 chapitres.'},
+      {q:'Quelle ecriture mysterieuse Daniel interpreta-t-il sur le mur ?', options:['"Dieu est grand"','Mene, Mene, Tekel, Ouparsin','Alpha et Omega','Shema Israel'], answer:1, expl:'"Mene, Mene, Tekel, Ouparsin" annonca la fin du regne de Beltsatsar (Daniel 5).'}
+    ]},
+      {q:'Quel etait le regime alimentaire que Daniel demanda a Babylone ?', options:['Seulement du pain et de l eau','Des legumes et de l eau','De la viande kasher uniquement','Du riz et des fruits'], answer:1, expl:'Daniel demanda a ne manger que des legumes et a ne boire que de l eau (Daniel 1:12).'},
+      {q:'Combien de jours Daniel et ses amis furent-ils testes avec ce regime ?', options:['7 jours','10 jours','30 jours','40 jours'], answer:1, expl:'Au bout de dix jours ils paraissaient plus beaux et mieux nourris (Daniel 1:15).'},
+      {q:'Quel etait le nouveau nom donne a Daniel par les Babyloniens ?', options:['Shadrak','Meshak','Abed-Nego','Belteshatsar'], answer:3, expl:'Le chef des eunuques donna a Daniel le nom de Belteshatsar (Daniel 1:7).'},
+      {q:'Quel songe le roi Nebuchadnetsar fit-il que Daniel interpretta ?', options:['Une statue aux pieds d argile','Un arbre immense qui fut coupe','Les quatre betes de la mer','Un bouc et un belier'], answer:0, expl:'Nebuchadnetsar vit une grande statue avec une tete d or, des flancs d argent, un ventre d airain et des pieds d argile (Daniel 2).'},
+      {q:'Quelle matiere representait le royaume de Babylone dans la statue du songe ?', options:['L argent','Le fer','L or','L airain'], answer:2, expl:'La tete d or de la statue representait Nebuchadnetsar et Babylone (Daniel 2:38).'},
+      {q:'Combien d annees Nebuchadnetsar vecut-il comme un animal dans les champs ?', options:['3 ans','5 ans','7 ans','10 ans'], answer:2, expl:'Nebuchadnetsar fut chasse des hommes et vecut comme les boeufs pendant sept ans (Daniel 4:32).'},
+      {q:'Quel roi vit l ecriture sur le mur lors du festin ?', options:['Nebuchadnetsar','Darius','Belshazzar','Cyrus'], answer:2, expl:'C est lors du festin de Belshazzar que la main apparut et ecrivit sur le mur (Daniel 5:1-5).'},
+      {q:'Quelle loi media-perse Darius utilisa-t-il contre Daniel ?', options:['L interdiction de prier un autre dieu que le roi','L interdiction de manger kasher','L interdiction de lire les Ecritures','L interdiction de se reunir'], answer:0, expl:'Darius signa un decret interdisant de prier quiconque autre que le roi pendant 30 jours (Daniel 6:7).'},
+      {q:'Combien de fois par jour Daniel priait-il malgre l interdiction ?', options:['1 fois','2 fois','3 fois','5 fois'], answer:2, expl:'Daniel priait et louait Dieu trois fois par jour comme il le faisait auparavant (Daniel 6:10).'},
+      {q:'Quelle vision de Daniel parle de quatre grands empires ?', options:['Les quatre betes sortant de la mer','La statue aux pieds d argile','Le belier et le bouc','Les 70 semaines'], answer:0, expl:'Daniel 7 decrit quatre betes sortant de la mer representant quatre empires mondiaux.'}
+];
+
+var T4 = [
+  { id:'jacob12', name:'Bethel', icon:'\u{1FA9C}', desc:'Jacob, pere des 12 tribus', verse:'"Ton nom ne sera plus Jacob, mais Israel."', verseRef:'Genese 32:28',
+    questions:[
+      {q:'Combien de fils Jacob eut-il en tout ?', options:['10','11','12','13'], answer:2, expl:'Jacob eut 12 fils qui donnerent naissance aux 12 tribus d\'Israel (Genese 35:22-26).'},
+      {q:'De combien de femmes Jacob eut-il des enfants ?', options:['1','2','3','4'], answer:3, expl:'Jacob eut des enfants de Lea, Rachel, Zilpa et Bilha (Genese 29-30).'},
+      {q:'Quel fils de Jacob fut vendu comme esclave par ses freres ?', options:['Benjamin','Ruben','Joseph','Simeon'], answer:2, expl:'Joseph fut vendu 20 pieces d\'argent a des marchands ismaelites (Genese 37:28).'},
+      {q:'Quelle tribu fut designee pour le sacerdoce en Israel ?', options:['Juda','Benjamin','Levi','Ephraim'], answer:2, expl:'La tribu de Levi fut consacree au service du sanctuaire (Nombres 3:6).'},
+      {q:'De quelle tribu Jesus est-il issu selon les genealogies evangeliques ?', options:['Levi','Benjamin','Juda','Ephraim'], answer:2, expl:'Jesus est de la tribu de Juda, descendant de David (Matthieu 1:2-16).'}
+    ]},
+      {q:'Quelle etait la signification du nom Jacob ?', options:['Celui qui lutte avec Dieu','Talon ou celui qui supplante','Bien-aime de Dieu','Le fort'], answer:1, expl:'Jacob signifie talon ou celui qui supplante car il tenait le talon d Esau a la naissance (Genese 25:26).'},
+      {q:'Que donna Jacob a Esau pour son droit d ainesse ?', options:['De l or','Un plat de lentilles','Du pain et du vin','Un troupeau'], answer:1, expl:'Jacob donna du pain et un potage de lentilles a Esau en echange de son droit d ainesse (Genese 25:34).'},
+      {q:'Comment Jacob obtint-il la benediction de son pere Isaac ?', options:['Par la priere','En se deguisant en Esau','En combattant son frere','Isaac le choisit librement'], answer:1, expl:'Jacob mit les vetements d Esau et des peaux de chevreau sur ses mains pour tromper Isaac (Genese 27:15-16).'},
+      {q:'Combien d annees Jacob travailla-t-il pour obtenir Rachel comme femme ?', options:['7 ans','14 ans','21 ans','7 et encore 7 = 14 ans'], answer:3, expl:'Jacob travailla 7 ans pour Rachel mais recut Lea, puis travailla encore 7 ans pour Rachel (Genese 29:20-28).'},
+      {q:'Quel fils de Jacob reçut le songe des 11 gerbes qui se prosternaient devant lui ?', options:['Ruben','Juda','Benjamin','Joseph'], answer:3, expl:'Joseph reva que onze gerbes se prosternaient devant la sienne (Genese 37:7).'},
+      {q:'Quelle tribu d Israel reçut la premiere part de l heritage selon Genese 49 ?', options:['Ruben','Juda','Levi','Joseph'], answer:0, expl:'Ruben etait le premier-ne de Jacob mais perdit sa preeminence a cause de son peche (Genese 49:3-4).'},
+      {q:'Quelle tribu est decrite comme un lion dans la prophetie de Jacob ?', options:['Benjamin','Dan','Juda','Issacar'], answer:2, expl:'Jacob dit : Juda est un lionceau (Genese 49:9).'},
+      {q:'Quel fils de Jacob est compare a un serpent sur le chemin dans Genese 49 ?', options:['Dan','Nephthali','Gad','Aser'], answer:0, expl:'Jacob dit : Dan sera un serpent sur le chemin (Genese 49:17).'},
+      {q:'Lequel des fils de Jacob devint gouverneur d Egypte ?', options:['Ruben','Simeon','Juda','Joseph'], answer:3, expl:'Pharaon etablit Joseph sur tout le pays d Egypte (Genese 41:41).'},
+      {q:'Combien d annees Jacob vecut-il au total ?', options:['137 ans','147 ans','157 ans','167 ans'], answer:1, expl:'Jacob vecut cent quarante-sept ans (Genese 47:28).'},
+  { id:'josue12', name:'Jericho', icon:'\u{1F3BA}', desc:'La conquete de Canaan', verse:'"Sois fort et courageux."', verseRef:'Josue 1:9',
+    questions:[
+      {q:'Combien de fois les Israelites firent-ils le tour de Jericho avant que les murs tombent ?', options:['6','7','12','13'], answer:3, expl:'7 jours x 1 tour + le 7e jour x 7 tours = 13 tours au total (Josue 6).'},
+      {q:'Quelles tribus recueillirent Jerusalem comme heritage ?', options:['Juda et Benjamin','Ephraim','Dan','Simeon'], answer:0, expl:'Jerusalem se trouvait sur la frontiere entre Juda et Benjamin.'},
+      {q:'Quelle tribu n\'eut pas de territoire car consacree au service de Dieu ?', options:['Simeon','Dan','Levi','Asser'], answer:2, expl:'La tribu de Levi ne recut pas de territoire mais des villes dans chaque tribu (Josue 13:14).'},
+      {q:'Combien de villes de refuge Josue etablit-il en Canaan ?', options:['3','6','9','12'], answer:1, expl:'Six villes de refuge furent designees en Canaan (Josue 20:7-8).'},
+      {q:'Quel fils de Nun succeda a Moise pour conduire Israel en Canaan ?', options:['Caleb','Aaron','Josue','Eleazar'], answer:2, expl:'Josue fils de Nun fut designe par Dieu pour succeder a Moise (Deuteronome 31:23).'}
+    ]},
+      {q:'Combien de temps les Israelites marchèrent-ils autour de Jericho avant que les murs tombent ?', options:['6 jours','7 jours','12 jours','14 jours'], answer:1, expl:'Ils tournerent autour de la ville pendant sept jours (Josue 6:15).'},
+      {q:'Quelle tribu reçut l heritage le plus au nord d Israel ?', options:['Dan','Nephthali','Aser','Zabulon'], answer:1, expl:'Nephthali reçut son heritage au nord du pays, pres du lac de Galilee.'},
+      {q:'Quelle tribu s etablit dans le delta du Nil selon le livre des Juges ?', options:['Dan','Simeon','Benjamin','Aser'], answer:0, expl:'La tribu de Dan migra vers le nord, mais une partie resta dans la region cotieres (Juges 18).'},
+      {q:'Quelle tribu d Israel s etablit au sud du pays pres d Edom ?', options:['Juda','Simeon','Ruben','Gad'], answer:1, expl:'Simeon reçut un heritage enclave dans le territoire de Juda au sud (Josue 19:1).'},
+      {q:'Quelles tribus s etablirent a l est du Jourdain avant la conquete de Canaan ?', options:['Ruben Gad et la demi-tribu de Manasse','Ruben Simeon et Levi','Gad Aser et Zabulon','Dan Benjamin et Ephraim'], answer:0, expl:'Ruben Gad et la demi-tribu de Manasse demanderent a s etablir a l est du Jourdain (Nombres 32:1-5).'},
+      {q:'Combien de villes Josue distribua-t-il a la tribu de Levi ?', options:['12 villes','24 villes','48 villes','60 villes'], answer:2, expl:'Quarante-huit villes furent donnees aux Levites avec leurs paturages (Josue 21:41).'},
+      {q:'Quelle prophetie Jacob fit-il sur la tribu de Juda ?', options:['Elle sera la plus petite','Le sceptre ne s eloignera pas de Juda','Elle sera dispersee en Israel','Elle sera un serpent sur le chemin'], answer:1, expl:'Le sceptre ne s eloignera pas de Juda jusqu a ce que vienne le Shilo (Genese 49:10).'},
+      {q:'Quel est le premier territoire conquis par Josue en Canaan ?', options:['Jerusalem','Ai','Jericho','Hebron'], answer:2, expl:'Jericho fut la premiere ville conquise par Josue en Canaan (Josue 6).'},
+      {q:'Pourquoi Ai fut d abord mal conquise par Israel ?', options:['Manque de soldats','Le peche d Achan qui avait pris du butin consacre','Manque de foi de Josue','L ennemi etait trop fort'], answer:1, expl:'Achan avait pris un manteau de Shinear de l or et de l argent du butin consacre a Dieu (Josue 7:21).'},
+      {q:'Combien d annees dura la conquete de Canaan par Josue ?', options:['3 ans','7 ans','10 ans','40 ans'], answer:1, expl:'La conquete principale de Canaan dura environ sept ans selon les chronologies bibliques.'},
+  { id:'royaume', name:'Samarie', icon:'\u2694', desc:'Le Royaume Divise', verse:'"Israel se separa de la maison de David."', verseRef:'1 Rois 12:19',
+    questions:[
+      {q:'En combien de royaumes Israel se divisa-t-il apres Salomon ?', options:['2','3','4','10'], answer:0, expl:'Israel se divisa en deux royaumes : Israel au nord et Juda au sud (1 Rois 12).'},
+      {q:'Combien de tribus formerent le royaume du nord (Israel) ?', options:['8','10','11','12'], answer:1, expl:'Dix tribus suivirent Jeroboam pour former le royaume d\'Israel au nord (1 Rois 12:20).'},
+      {q:'Quelle capitale fut donnee au royaume du nord ?', options:['Jericho','Hebron','Samarie','Silo'], answer:2, expl:'Omri batit Samarie et en fit la capitale du royaume du nord (1 Rois 16:24).'},
+      {q:'Quelle nation emmena les 10 tribus du nord en captivite ?', options:['Babylone','Egypte','Assyrie','Perse'], answer:2, expl:'L\'Assyrie deporta les 10 tribus du nord en 722 av. J.-C. (2 Rois 17:6).'},
+      {q:'Combien de rois regnerent sur le royaume du sud (Juda) avant l\'exil ?', options:['15','19','20','22'], answer:2, expl:'20 rois regnerent sur Juda de Roboam a Sedekias avant l\'exil babylonien.'}
+    ]},
+      {q:'Quel fut le premier roi d Israel ?', options:['David','Saul','Jeroboam','Samuel'], answer:1, expl:'Saul fils de Kis de la tribu de Benjamin fut le premier roi d Israel (1 Samuel 10:1).'},
+      {q:'Combien de temps dura le royaume uni d Israel ?', options:['40 ans','80 ans','120 ans','Environ 120 ans sous Saul David et Salomon'], answer:3, expl:'Le royaume uni dura environ 120 ans sous les regnes de Saul David et Salomon.'},
+      {q:'Quelle idole Jeroboam I installa-t-il pour detourner Israel de Jerusalem ?', options:['Des statues de Baal','Deux veaux d or a Bethel et Dan','Un temple a Samarie','Une Asherah'], answer:1, expl:'Jeroboam fit deux veaux d or et dit au peuple : Voici tes dieux Israel (1 Rois 12:28).'},
+      {q:'Quel roi d Israel construisit la ville de Samarie ?', options:['Jeroboam','Achab','Omri','Baasa'], answer:2, expl:'Omri acheta la montagne de Samarie et batit une ville qu il appela Samarie (1 Rois 16:24).'},
+      {q:'Combien de rois eurent le royaume du nord (Israel) en tout ?', options:['15','19','20','22'], answer:1, expl:'Dix-neuf rois regnerent sur le royaume du nord de Jeroboam I a Osee.'},
+      {q:'Quel roi de Juda fut le seul a regner de facon totalement positive selon les Rois ?', options:['Josaphat','Ezechias','Josias','Asa'], answer:2, expl:'Josias fit ce qui est droit aux yeux de l Eternel et marcha dans toutes les voies de David (2 Rois 22:2).'},
+      {q:'En quelle annee le royaume du nord fut-il detruit par l Assyrie ?', options:['850 av JC','722 av JC','606 av JC','587 av JC'], answer:1, expl:'L Assyrie prit Samarie et deporta Israel en 722 av JC (2 Rois 17:6).'},
+      {q:'En quelle annee Jerusalem et le temple de Salomon furent-ils detruits ?', options:['722 av JC','606 av JC','587 av JC','539 av JC'], answer:2, expl:'Nebucadnetsar prit Jerusalem et detruisit le temple en 587 av JC (2 Rois 25:8-9).'},
+      {q:'Quel prophete combattit les prophetes de Baal au mont Carmel ?', options:['Esaie','Jeremie','Elie','Elisee'], answer:2, expl:'Elie defia 450 prophetes de Baal et 400 prophetes d Asherah sur le mont Carmel (1 Rois 18:19).'},
+      {q:'Quel miracle Elisee accomplit-il avec l huile d une veuve ?', options:['Il la multiplia jusqu a remplir tous les vases','Il la changea en eau','Il en oignit les malades','Il en remplit le temple'], answer:0, expl:'L huile de la veuve coula jusqu a remplir tous les vases qu elle avait rassembles (2 Rois 4:6).'}
+];
+
+// ============================================================
+// LANGUAGE
+// ============================================================
+var LANG = 'fr';
+
+var UI = {
+  fr: {
+    start: 'COMMENCER LA QUETE',
+    territories: 'TERRITOIRES',
+    level: 'NIVEAU',
+    back: '\u2190',
+    continuer: 'CONTINUER',
+    retour: 'RETOUR A LA CARTE',
+    rejouer: 'REJOUER',
+    classement: 'CLASSEMENT',
+    partager: 'Partager mon brevet',
+    score_label: 'bonnes reponses',
+    xp_label: 'Experience',
+    niv: 'NIV',
+    locked: 'Verrouille',
+    ready: 'questions',
+    question: 'Question',
+    sur: 'sur',
+    exact: 'Exact ! ',
+    incorrect: 'Incorrect. ',
+    score_insuffisant: 'Score insuffisant - Rejoue pour debloquer la suite (4/5 min)',
+    saison_ok: 'Saison accomplie !',
+    parfait: 'Parfait ! Territoire Maitrise',
+    conquis: 'Territoire Conquis - Vise 5/5 pour debloquer la saison suivante',
+    revise: 'Revise les Ecritures',
+    no_score: 'Aucun score enregistre. Joue un territoire pour apparaitre ici.',
+    ton_nom: 'Ton nom',
+    temps: 'Temps',
+    score_max: 'Score max + temps minimal = 1er rang',
+    nouvelle_saison: 'Nouvelle saison : ',
+    docteur: 'Docteur de la Foi !'
+  },
+  en: {
+    start: 'START THE QUEST',
+    territories: 'TERRITORIES',
+    level: 'LEVEL',
+    back: '\u2190',
+    continuer: 'CONTINUE',
+    retour: 'BACK TO MAP',
+    rejouer: 'REPLAY',
+    classement: 'LEADERBOARD',
+    partager: 'Share my certificate',
+    score_label: 'correct answers',
+    xp_label: 'Experience',
+    niv: 'LVL',
+    locked: 'Locked',
+    ready: 'questions',
+    question: 'Question',
+    sur: 'of',
+    exact: 'Correct! ',
+    incorrect: 'Wrong. ',
+    score_insuffisant: 'Score too low - Replay to unlock next territory (4/5 min)',
+    saison_ok: 'Season Complete!',
+    parfait: 'Perfect! Territory Mastered',
+    conquis: 'Territory Conquered - Get 5/5 to unlock next season',
+    revise: 'Keep studying the Scriptures',
+    no_score: 'No scores yet. Play a territory to appear here.',
+    ton_nom: 'Your name',
+    temps: 'Time',
+    score_max: 'Highest score + fastest time = 1st place',
+    nouvelle_saison: 'New season: ',
+    docteur: 'Doctor of Faith!'
+  }
+};
+
+function t(key){ return UI[LANG][key] || UI['fr'][key] || key; }
+
+function setLang(lang){
+  LANG = lang;
+  document.getElementById('btn-fr').style.borderColor = lang==='fr'?'var(--gold)':'var(--sand)';
+  document.getElementById('btn-fr').style.color = lang==='fr'?'var(--gold-bright)':'var(--stone)';
+  document.getElementById('btn-fr').style.background = lang==='fr'?'var(--ink)':'transparent';
+  document.getElementById('btn-en').style.borderColor = lang==='en'?'var(--gold)':'var(--sand)';
+  document.getElementById('btn-en').style.color = lang==='en'?'var(--gold-bright)':'var(--stone)';
+  document.getElementById('btn-en').style.background = lang==='en'?'var(--ink)':'transparent';
+  document.getElementById('start-btn').textContent = t('start');
+  document.getElementById('home-territories').parentElement.querySelector('.home-stat-label').textContent = t('territories');
+  document.getElementById('home-level').parentElement.querySelector('.home-stat-label').textContent = UI[lang]['level'];
+  S.season = 0;
+  // Keep separate progress per language
+  if(!S.territoriesEN) S.territoriesEN = {};
+  if(!S.territoriesFR) S.territoriesFR = {};
+}
+
+var SEASONS = [
+  {id:'s1', name:'Les Fondements', subtitle:'De la Creation a Rome', difficulty:1, timerMs:150, territories:T1},
+  {id:'s2', name:'Les Femmes de la Bible', subtitle:'Figures feminines des Ecritures', difficulty:2, timerMs:120, territories:T2},
+  {id:'s3', name:'Les Prophetes', subtitle:'Voix de Dieu dans l\'Histoire', difficulty:3, timerMs:100, territories:T3},
+  {id:'s4', name:'Les 12 Tribus', subtitle:'Les fils de Jacob', difficulty:4, timerMs:80, territories:T4}
+];
+
+// ============================================================
+// ENGLISH SEASONS (Season 1 only for MVP - same structure)
+// ============================================================
+var T1_EN = [
+  { id:'creation_en', name:'Eden', icon:'\u{1F331}', desc:'The Book of Genesis', verse:'"In the beginning God created the heavens and the earth."', verseRef:'Genesis 1:1',
+    questions:[
+      {q:'In how many days did God create the world?', options:['5 days','6 days','7 days','10 days'], answer:1, expl:'God created in 6 days and rested on the 7th (Genesis 1-2).'},
+      {q:'What was the name of the first woman?', options:['Sara','Eve','Mary','Rebecca'], answer:1, expl:'Eve was created from Adam's rib (Genesis 2:22).'},
+      {q:'Which fruit was forbidden in the Garden of Eden?', options:['The fig','The olive','The fruit of the tree of knowledge','The grape'], answer:2, expl:'God forbade eating from the tree of the knowledge of good and evil.'},
+      {q:'In what form did the tempter appear to Eve?', options:['A lion','A serpent','An eagle','A man'], answer:1, expl:'The serpent was the most cunning of all animals (Genesis 3:1).'},
+      {q:'Which two sons of Adam and Eve are mentioned first?', options:['Jacob and Esau','Abraham and Lot','Cain and Abel','Shem and Ham'], answer:2, expl:'Cain and Abel were the first sons of Adam and Eve (Genesis 4).'},
+      {q:'What was Adam's role in the Garden of Eden?', options:['To guard and cultivate it','To live there only','To name the animals only','To contemplate it'], answer:0, expl:'God placed the man in the garden to cultivate and keep it (Genesis 2:15).'},
+      {q:'On which day did God create the sun and moon?', options:['Day 2','Day 3','Day 4','Day 5'], answer:2, expl:'God made the two great lights on the fourth day (Genesis 1:16).'},
+      {q:'What did God make from Adam's rib?', options:['An animal','The woman','A tree','An angel'], answer:1, expl:'The Lord God made a woman from the rib he had taken out of the man (Genesis 2:22).'},
+      {q:'What happened to Cain after he killed Abel?', options:['He was executed','He was cursed and driven out','He became king','He was immediately forgiven'], answer:1, expl:'God cursed Cain and drove him from the land (Genesis 4:11-12).'},
+      {q:'Which person did not die but was taken by God?', options:['Adam','Seth','Enoch','Lamech'], answer:2, expl:'Enoch walked with God, then he was no more, because God took him away (Genesis 5:24).'},
+      {q:'What does the name Eve mean?', options:['Light','Mother of all living','Beloved','Wisdom'], answer:1, expl:'Adam named his wife Eve because she would become the mother of all the living (Genesis 3:20).'},
+      {q:'Which son replaced Abel?', options:['Cain','Seth','Enosh','Kenan'], answer:1, expl:'Eve gave birth to Seth as another offspring in place of Abel (Genesis 4:25).'},
+      {q:'What clothes did God make for Adam and Eve?', options:['Fig leaves','Animal skins','Linen','Wool'], answer:1, expl:'The Lord God made garments of skin for Adam and his wife (Genesis 3:21).'},
+      {q:'How old was Methuselah, the oldest man in the Bible?', options:['900','950','969','999'], answer:2, expl:'Methuselah lived 969 years, the oldest person in the Bible (Genesis 5:27).'},
+      {q:'On which day did God create fish and birds?', options:['Day 3','Day 4','Day 5','Day 6'], answer:2, expl:'God created sea creatures and birds on the fifth day (Genesis 1:20-23).'}
+    ]},
+  { id:'noah_en', name:'Ararat', icon:'\u{1F54A}', desc:'Noah and the Flood', verse:'"I establish my covenant with you."', verseRef:'Genesis 9:11',
+    questions:[
+      {q:'Why did God send the flood?', options:['A drought','The wickedness of man','A war','Noah's disobedience'], answer:1, expl:'God saw how great the wickedness of the human race had become (Genesis 6:5).'},
+      {q:'How many pairs of unclean animals did Noah take?', options:['1 pair','2 pairs','7 pairs','10 pairs'], answer:0, expl:'One pair (male and female) of every unclean animal (Genesis 7:2).'},
+      {q:'How many days did it rain during the flood?', options:['7 days','20 days','40 days','100 days'], answer:2, expl:'Rain fell on the earth forty days and forty nights (Genesis 7:12).'},
+      {q:'Which bird did Noah send to see if the waters had receded?', options:['An eagle','A raven then a dove','A sparrow','A falcon'], answer:1, expl:'Noah first sent out a raven, then a dove (Genesis 8:6-8).'},
+      {q:'What sign did God give Noah after the flood?', options:['A star','A rainbow','An angel','A flame'], answer:1, expl:'The rainbow was the sign of God's covenant with all living creatures (Genesis 9:13).'},
+      {q:'What wood did Noah use to build the ark?', options:['Cedar','Gopher wood','Oak','Acacia'], answer:1, expl:'God said to Noah: Make yourself an ark of gopher wood (Genesis 6:14).'},
+      {q:'How old was Noah when the flood came?', options:['500','600','700','800'], answer:1, expl:'Noah was six hundred years old when the floodwaters came (Genesis 7:6).'},
+      {q:'What did Noah do after leaving the ark?', options:['Built a city','Built an altar and offered burnt offerings','Planted a vineyard immediately','Sent messengers'], answer:1, expl:'Noah built an altar to the Lord and offered burnt offerings (Genesis 8:20).'},
+      {q:'How many sons did Noah have?', options:['2','3','4','5'], answer:1, expl:'Noah had three sons: Shem, Ham and Japheth (Genesis 6:10).'},
+      {q:'Which son of Noah was cursed?', options:['Shem','Ham himself','Canaan son of Ham','Japheth'], answer:2, expl:'Noah cursed Canaan, the son of Ham (Genesis 9:25).'},
+      {q:'How many floors did the ark have?', options:['1','2','3','4'], answer:2, expl:'The ark had a lower, middle and upper deck (Genesis 6:16).'},
+      {q:'What food did God permit Noah after the flood?', options:['Only plants','Animals but not blood','Everything without restriction','Only clean animals'], answer:1, expl:'God permitted eating animals but forbade consuming blood (Genesis 9:3-4).'},
+      {q:'What language did all humanity speak before the Tower of Babel?', options:['Hebrew','Aramaic','One language','Greek'], answer:2, expl:'The whole world had one language and a common speech (Genesis 11:1).'},
+      {q:'Where was the Tower of Babel built?', options:['In Egypt','In the plain of Shinar','In Canaan','In northern Mesopotamia'], answer:1, expl:'They found a plain in Shinar and settled there (Genesis 11:2).'},
+      {q:'What did Ham do that offended Noah?', options:['He stole his food','He saw his father's nakedness and told his brothers','He left the family','He burned the altar'], answer:1, expl:'Ham saw his father's nakedness and told his brothers (Genesis 9:22).'}
+    ]},
+  { id:'abraham_en', name:'Canaan', icon:'\u26FA', desc:'Abraham, Father of Nations', verse:'"I will make you into a great nation."', verseRef:'Genesis 12:2',
+    questions:[
+      {q:'From which city was Abraham called to leave?', options:['Jerusalem','Ur of the Chaldeans','Babylon','Memphis'], answer:1, expl:'Abraham (then Abram) lived in Ur of the Chaldeans (Genesis 11:31).'},
+      {q:'What was the name of Abraham's wife?', options:['Rebecca','Leah','Sarah','Rachel'], answer:2, expl:'Sarah (formerly Sarai) was Abraham's wife.'},
+      {q:'Which son did God ask Abraham to sacrifice?', options:['Ishmael','Jacob','Isaac','Joseph'], answer:2, expl:'God tested Abraham by asking him to sacrifice Isaac (Genesis 22).'},
+      {q:'Which animal did God provide to replace Isaac?', options:['A bull','A ram','A lamb','A goat'], answer:1, expl:'A ram caught by its horns in a thicket replaced Isaac (Genesis 22:13).'},
+      {q:'Who was Abraham's nephew saved from Sodom?', options:['Esau','Lot','Ishmael','Moses'], answer:1, expl:'Lot, Abraham's nephew, was saved from the destruction of Sodom (Genesis 19).'},
+      {q:'How old was Abraham when Isaac was born?', options:['75','90','100','110'], answer:2, expl:'Abraham was a hundred years old when Isaac was born (Genesis 21:5).'},
+      {q:'What sign of the covenant did God give Abraham?', options:['Baptism','Circumcision','The Sabbath','The rainbow'], answer:1, expl:'God instituted circumcision as the sign of his covenant with Abraham (Genesis 17:11).'},
+      {q:'How many men did Abraham arm to rescue Lot?', options:['100','218','318','500'], answer:2, expl:'Abraham armed 318 trained men born in his household (Genesis 14:14).'},
+      {q:'Who blessed Abraham after the battle to rescue Lot?', options:['Shem','Melchizedek','Aaron','Nathan'], answer:1, expl:'Melchizedek, king of Salem, blessed Abraham (Genesis 14:18-19).'},
+      {q:'On which mountain was Abraham to sacrifice Isaac?', options:['Mount Sinai','Mount Moriah','Mount Carmel','Mount Hermon'], answer:1, expl:'God said: Go to the region of Moriah (Genesis 22:2).'},
+      {q:'What happened to Lot's wife when she looked back?', options:['She died instantly','She became a pillar of salt','She went blind','She disappeared'], answer:1, expl:'Lot's wife looked back and she became a pillar of salt (Genesis 19:26).'},
+      {q:'Who was Isaac's first wife?', options:['Leah','Sarah','Rebecca','Rachel'], answer:2, expl:'Rebecca, daughter of Bethuel, became Isaac's wife (Genesis 24:67).'},
+      {q:'How old was Abraham when he died?', options:['150','165','175','180'], answer:2, expl:'Abraham lived 175 years (Genesis 25:7).'},
+      {q:'How many sons did Abraham have with Keturah?', options:['2','4','6','8'], answer:2, expl:'Keturah bore Abraham six sons (Genesis 25:2).'},
+      {q:'What did Abraham give to Melchizedek?', options:['Half his plunder','A tenth of everything','An animal sacrifice','Gold'], answer:1, expl:'Abraham gave a tenth of everything to Melchizedek (Genesis 14:20).'}
+    ]},
+  { id:'moses_en', name:'Egypt', icon:'\u{1F33E}', desc:'Moses and the Exodus', verse:'"I am who I am."', verseRef:'Exodus 3:14',
+    questions:[
+      {q:'How was baby Moses saved?', options:['Hidden in a cave','Entrusted to a shepherd','Placed in a basket on the Nile','Sent to Canaan'], answer:2, expl:'His mother placed him in a papyrus basket on the Nile (Exodus 2:3).'},
+      {q:'How many plagues did God send on Egypt?', options:['7','10','12','5'], answer:1, expl:'God sent 10 plagues on Egypt to free Israel (Exodus 7-12).'},
+      {q:'What was the last plague that convinced Pharaoh?', options:['Hail','Darkness','Death of the firstborn','Locusts'], answer:2, expl:'The death of the firstborn was the decisive plague (Exodus 12).'},
+      {q:'On which mountain did God give the 10 Commandments?', options:['Mount Carmel','Mount Sinai','Mount Zion','Mount Tabor'], answer:1, expl:'The 10 Commandments were given on Mount Sinai (Exodus 19-20).'},
+      {q:'How many years did Israel wander in the desert?', options:['10','20','40','50'], answer:2, expl:'Israel wandered 40 years in the desert (Numbers 14:33).'},
+      {q:'Who was Moses's father?', options:['Aaron','Amram','Kohath','Levi'], answer:1, expl:'Amram married Jochebed who bore him Aaron and Moses (Exodus 6:20).'},
+      {q:'What was the name of Moses's wife?', options:['Miriam','Zipporah','Deborah','Ruth'], answer:1, expl:'Moses married Zipporah, daughter of Jethro (Exodus 2:21).'},
+      {q:'What was the first plague on Egypt?', options:['Frogs','Gnats','Water turned to blood','Flies'], answer:2, expl:'The first plague was the waters of the Nile turned to blood (Exodus 7:20).'},
+      {q:'What was the manna God sent in the desert?', options:['Bread from heaven','Dried meat','Tree fruit','Wheat grains'], answer:0, expl:'Manna was food God rained down from heaven for Israel (Exodus 16:4).'},
+      {q:'What did Moses do when he saw the golden calf?', options:['He prayed silently','He broke the tablets of the law','He fled','He worshiped with the people'], answer:1, expl:'Moses burned with anger and broke the tablets at the foot of the mountain (Exodus 32:19).'},
+      {q:'How old was Moses when he died?', options:['100','110','120','130'], answer:2, expl:'Moses was a hundred and twenty years old when he died (Deuteronomy 34:7).'},
+      {q:'Who spoke for Moses before Pharaoh?', options:['Joshua','Caleb','Aaron','Miriam'], answer:2, expl:'Aaron spoke for Moses before Pharaoh (Exodus 7:1-2).'},
+      {q:'What did Moses see in the desert that caught his attention?', options:['A giant eagle','A bush that burned without being consumed','A pillar of fire','A bright cloud'], answer:1, expl:'The angel of the Lord appeared to him in flames of fire from within a bush (Exodus 3:2).'},
+      {q:'How many times did Moses strike the rock to get water?', options:['1','2','3','Not specified'], answer:1, expl:'Moses struck the rock twice and water gushed out (Numbers 20:11).'},
+      {q:'Which leader succeeded Moses to lead Israel into Canaan?', options:['Caleb','Aaron','Joshua','Eleazar'], answer:2, expl:'Joshua son of Nun was appointed by God to succeed Moses (Deuteronomy 31:23).'}
+    ]},
+  { id:'david_en', name:'Jerusalem', icon:'\u2605', desc:'David, King of Israel', verse:'"The Lord is my shepherd, I lack nothing."', verseRef:'Psalm 23:1',
+    questions:[
+      {q:'Which giant did David defeat with a sling?', options:['Og','Goliath','Sisera','Sihon'], answer:1, expl:'David defeated Goliath the Philistine with a sling and a stone (1 Samuel 17).'},
+      {q:'From which tribe was David?', options:['Levi','Benjamin','Judah','Ephraim'], answer:2, expl:'David was from the tribe of Judah (Ruth 4:18-22).'},
+      {q:'What was David's occupation before becoming king?', options:['Fisherman','Shepherd','Carpenter','Soldier'], answer:1, expl:'David tended his father Jesse's flocks (1 Samuel 16:11).'},
+      {q:'Who was David's faithful friend among Saul's sons?', options:['Absalom','Nathan','Jonathan','Ittai'], answer:2, expl:'Jonathan loved David as himself (1 Samuel 18:1).'},
+      {q:'How many psalms are traditionally attributed to David?', options:['50','73','100','150'], answer:1, expl:'73 psalms bear David's name in their titles.'},
+      {q:'How many brothers did David have?', options:['3','5','7','9'], answer:2, expl:'David was the eighth son of Jesse, meaning seven older brothers (1 Samuel 16:10-11).'},
+      {q:'Who anointed David as king?', options:['Nathan','Eli','Samuel','Gad'], answer:2, expl:'Samuel took the horn of oil and anointed David in the presence of his brothers (1 Samuel 16:13).'},
+      {q:'How many stones did David pick up to fight Goliath?', options:['1','3','5','7'], answer:2, expl:'David chose five smooth stones from the stream (1 Samuel 17:40).'},
+      {q:'How many years did David reign over all Israel?', options:['20','33','40','50'], answer:2, expl:'David reigned forty years over Israel (1 Kings 2:11).'},
+      {q:'Which prophet rebuked David for his sin with Bathsheba?', options:['Gad','Elijah','Nathan','Amos'], answer:2, expl:'Nathan came to David and told him the parable of the lamb (2 Samuel 12:1).'},
+      {q:'Which son of David rebelled against him?', options:['Solomon','Absalom','Amnon','Adonijah'], answer:1, expl:'Absalom rebelled against his father David (2 Samuel 15).'},
+      {q:'Why could David not build the temple?', options:['Lack of money','He had shed too much blood','God did not allow it','He died too young'], answer:1, expl:'God said David had shed much blood, so his son would build the temple (1 Chronicles 22:8).'},
+      {q:'Who built the Temple in Jerusalem?', options:['David','Solomon','Hezekiah','Josiah'], answer:1, expl:'Solomon, son of David, built the temple of the Lord in Jerusalem (1 Kings 6:1).'},
+      {q:'In which city did David first reign before Jerusalem?', options:['Bethlehem','Hebron','Jericho','Samaria'], answer:1, expl:'David reigned seven years in Hebron before taking Jerusalem (2 Samuel 5:5).'},
+      {q:'Which instrument did David play to soothe King Saul?', options:['Flute','Harp','Tambourine','Trumpet'], answer:1, expl:'David played the harp and the evil spirit would leave Saul (1 Samuel 16:23).'}
+    ]},
+  { id:'nativity_en', name:'Bethlehem', icon:'\u2728', desc:'The Nativity', verse:'"She will give birth to a son, and you are to give him the name Jesus."', verseRef:'Matthew 1:21',
+    questions:[
+      {q:'In which city was Jesus born?', options:['Nazareth','Jerusalem','Bethlehem','Hebron'], answer:2, expl:'Jesus was born in Bethlehem in Judea (Matthew 2:1).'},
+      {q:'Who announced the birth of Jesus to Mary?', options:['Gabriel','Michael','Raphael','A prophet'], answer:0, expl:'The angel Gabriel was sent to Mary in Nazareth (Luke 1:26-27).'},
+      {q:'What did the Magi do when they arrived at the child Jesus?', options:['Baptized him','Bowed and offered gifts','Circumcised him','Prayed with Joseph'], answer:1, expl:'The Magi bowed down and offered him gold, frankincense and myrrh (Matthew 2:11).'},
+      {q:'Which king sought to kill the child Jesus?', options:['Pilate','Herod the Great','Caesar Augustus','Archelaus'], answer:1, expl:'Herod the Great sought the child to kill him (Matthew 2:13).'},
+      {q:'To which country did Joseph and Mary flee to protect Jesus?', options:['Syria','Babylon','Egypt','Greece'], answer:2, expl:'Joseph took the child and his mother to Egypt (Matthew 2:14).'},
+      {q:'Under which Roman emperor was Jesus born?', options:['Tiberius','Augustus','Nero','Claudius'], answer:1, expl:'A decree went out from Caesar Augustus (Luke 2:1).'},
+      {q:'Where was Jesus laid at birth?', options:['In a house','In a cave','In a manger','In a tent'], answer:2, expl:'She wrapped him in cloths and placed him in a manger (Luke 2:7).'},
+      {q:'Who announced the birth of Jesus to the shepherds?', options:['A prophet','An angel of the Lord','A star','John the Baptist'], answer:1, expl:'An angel of the Lord appeared to them and announced the birth of the Savior (Luke 2:9-11).'},
+      {q:'How precisely many Magi does the Bible mention?', options:['2','3','The Bible does not specify','12'], answer:2, expl:'The Bible does not specify the number of Magi. The tradition of 3 comes from the 3 gifts.'},
+      {q:'What were the three gifts of the Magi?', options:['Gold silver and myrrh','Gold frankincense and myrrh','Gold frankincense and incense','Myrrh frankincense and perfume'], answer:1, expl:'The Magi offered gold, frankincense and myrrh (Matthew 2:11).'},
+      {q:'What did Herod do after the Magi left?', options:['He repented','He ordered all boys under 2 in Bethlehem killed','He sent soldiers to Egypt','He consulted prophets'], answer:1, expl:'Herod ordered the killing of all male children in Bethlehem aged two and under (Matthew 2:16).'},
+      {q:'At what age did Jesus go to the Temple and discuss with the teachers?', options:['5','10','12','15'], answer:2, expl:'When Jesus was twelve, they went up to the Festival (Luke 2:42).'},
+      {q:'What did Jesus reply to Mary when she found him in the Temple?', options:['I prayed for you','Did you not know I had to be in my Father's house?','I came to fulfill the law','The Kingdom is near'], answer:1, expl:'Jesus said: Did you not know I had to be in my Father's house? (Luke 2:49).'},
+      {q:'What did Jesus do after the Temple episode at age 12?', options:['He began his ministry','He returned to Nazareth and was obedient to them','He went to live with John the Baptist','He studied in Jerusalem'], answer:1, expl:'Jesus went back to Nazareth with them and was obedient to them (Luke 2:51).'},
+      {q:'Why were Joseph and Mary in Bethlehem?', options:['To flee Herod','For the census','For the Passover feast','To visit relatives'], answer:1, expl:'Joseph went up to Bethlehem to register for the census (Luke 2:4-5).'}
+    ]}
+];
+
+var SEASONS_EN = [
+  {id:'s1_en', name:'The Foundations', subtitle:'From Creation to Rome', difficulty:1, timerMs:150, territories:T1_EN}
+];
+
+// ============================================================
+// STATE
+// ============================================================
+var S = {
+  xp:0, level:1, season:0,
+  territories:{},
+  territoriesFR:{},
+  territoriesEN:{},
+  currentTerritory:null, shuffledQ:[],
+  currentQ:0, score:0, answered:false,
+  timerInterval:null, timerVal:100,
+  lastResultScore:0, lastResultTotal:0,
+  questionStartTime:0, totalTimeMs:0,
+  leaderboard: (function(){ try{ return JSON.parse(localStorage.getItem('bq_leaderboard')||'[]'); }catch(e){ return []; } })(),
+  playerName: (function(){ try{ return localStorage.getItem('bq_name')||''; }catch(e){ return ''; } })()
+};
+
+var XP_PER_LEVEL = 100;
+var RANKS = ['Disciple','Apotre','Prophete','Patriarche','Docteur de la Foi'];
+
+function getCurSeasons(){ return LANG==='en' ? SEASONS_EN : SEASONS; }
+function curSeason(){ return getCurSeasons()[Math.min(S.season, getCurSeasons().length-1)]; }
+function curTerritories(){ return curSeason().territories; }
+function getTerritoryStore(){ return LANG==='en' ? S.territoriesEN : S.territoriesFR; }
+function getRank(){ return RANKS[Math.min(S.season, RANKS.length-1)]; }
+function getTimerMs(){ return curSeason().timerMs; }
+
+function getStars(score,total){
+  if(score===total) return 3;
+  if(score>=total*0.7) return 2;
+  if(score>=total*0.4) return 1;
+  return 0;
+}
+
+function isSeasonComplete(){
+  return curTerritories().every(function(t){
+    return getTerritoryStore()[t.id] && getTerritoryStore()[t.id].score === 5;
+  });
+}
+
+function isTerritoryUnlocked(idx){
+  if(idx===0) return true;
+  var prev = curTerritories()[idx-1];
+  return !!(getTerritoryStore()[prev.id] && getTerritoryStore()[prev.id].score >= 4);
+}
+
+// ============================================================
+// SHUFFLE
+// ============================================================
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=a[i];a[i]=a[j];a[j]=tmp;
+  }
+  return a;
+}
+
+function shuffleTerritory(base){
+  // Pick 5 random questions from the pool, shuffle their options
+  var picked = shuffle(base.questions).slice(0, 5);
+  var qs = picked.map(function(q){
+    var opts = q.options.map(function(o,i){ return {text:o, isAnswer:i===q.answer}; });
+    var so = shuffle(opts);
+    return Object.assign({},q,{options:so.map(function(o){return o.text;}), answer:so.findIndex(function(o){return o.isAnswer;})});
+  });
+  return Object.assign({},base,{questions:qs});
+}
+
+// ============================================================
+// SCREENS
+// ============================================================
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+}
+
+function showHome(){
+  var ts = curTerritories();
+  var done = ts.filter(function(t){return getTerritoryStore()[t.id]&&getTerritoryStore()[t.id].completed;}).length;
+  document.getElementById('home-territories').textContent = done+'/'+ts.length;
+  document.getElementById('home-level').textContent = S.level;
+  showScreen('home-screen');
+}
+
+function showMap(){
+  if(S.timerInterval){clearInterval(S.timerInterval);S.timerInterval=null;}
+  renderMap();
+  showScreen('map-screen');
+}
+
+function renderMap(){
+  var season = curSeason();
+  var diffFr = ['','Facile','Intermediaire','Difficile','Expert'];
+  var diffEn = ['','Easy','Intermediate','Hard','Expert'];
+  var diff = (LANG==='en'?diffEn:diffFr)[season.difficulty]||'';
+  document.getElementById('map-title').textContent = season.name.toUpperCase();
+  document.getElementById('map-player-badge').textContent = getRank()+' \u00B7 '+diff;
+  document.getElementById('map-level').textContent = S.level;
+  var xpPct = (S.xp%XP_PER_LEVEL)/XP_PER_LEVEL*100;
+  document.getElementById('xp-fill').style.width = xpPct+'%';
+  document.getElementById('xp-current').textContent = S.xp;
+
+  var html = curTerritories().map(function(t,i){
+    var unlocked = isTerritoryUnlocked(i);
+    var data = getTerritoryStore()[t.id]||{};
+    var completed = !!data.completed;
+    var stars = data.stars||0;
+    var isActive = unlocked&&!completed;
+    var cls = 'territory-node'+(completed?' completed':unlocked?' unlocked':'  locked')+(isActive?' active-territory':'');
+    var starStr = '\u2605'.repeat(stars)+'\u2606'.repeat(3-stars);
+    var badge = completed?'<div class="check-badge">\u2713</div>':'';
+    var onclick = unlocked?'onclick="startTerritory(\''+t.id+'\')"':'';
+    return '<div class="'+cls+'" '+onclick+'>'
+      +'<div class="territory-circle">'+t.icon+badge+'</div>'
+      +'<div class="territory-info">'
+        +'<div class="territory-name">'+t.name+'</div>'
+        +'<div class="territory-desc">'+t.desc+'</div>'
+        +'<div class="territory-progress">'+(completed?'<span class="territory-stars">'+starStr+'</span>':unlocked?t.questions.length+' '+UI[LANG]['ready']:UI[LANG]['locked'])+'</div>'
+      +'</div></div>';
+  }).join('');
+  document.getElementById('territory-path').innerHTML = html;
+}
+
+// ============================================================
+// QUIZ
+// ============================================================
+function startTerritory(id){
+  var base = curTerritories().find(function(t){return t.id===id;});
+  if(!base) return;
+  S.currentTerritory = shuffleTerritory(base);
+  S.currentQ = 0; S.score = 0; S.answered = false; S.totalTimeMs = 0;
+  document.getElementById('quiz-territory-name').textContent = S.currentTerritory.name;
+  showScreen('quiz-screen');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  var t = S.currentTerritory;
+  var q = t.questions[S.currentQ];
+  var total = t.questions.length;
+  document.getElementById('quiz-q-num').textContent = UI[LANG]['question']+' '+(S.currentQ+1)+' '+UI[LANG]['sur']+' '+total;
+  document.getElementById('quiz-progress-text').textContent = S.score+'/'+total;
+  document.getElementById('quiz-question').textContent = q.q;
+  document.getElementById('quiz-feedback').className = 'quiz-feedback';
+  document.getElementById('quiz-feedback').textContent = '';
+  document.getElementById('quiz-next-btn').className = 'quiz-next-btn';
+  S.answered = false;
+  S.questionStartTime = Date.now();
+  document.getElementById('quiz-options').innerHTML = q.options.map(function(o,i){
+    return '<button class="quiz-option" onclick="answerQ('+i+')">'+o+'</button>';
+  }).join('');
+  if(S.timerInterval){clearInterval(S.timerInterval);S.timerInterval=null;}
+  S.timerVal = 100;
+  document.getElementById('quiz-timer-fill').style.width = '100%';
+  S.timerInterval = setInterval(function(){
+    S.timerVal -= 0.5;
+    document.getElementById('quiz-timer-fill').style.width = S.timerVal+'%';
+    if(S.timerVal<=0){ clearInterval(S.timerInterval); S.timerInterval=null; if(!S.answered) answerQ(-1); }
+  }, getTimerMs());
+}
+
+function answerQ(chosen){
+  if(S.answered) return;
+  S.answered = true;
+  S.totalTimeMs += (Date.now() - S.questionStartTime);
+  if(S.timerInterval){clearInterval(S.timerInterval);S.timerInterval=null;}
+  var q = S.currentTerritory.questions[S.currentQ];
+  var correct = chosen===q.answer;
+  document.querySelectorAll('.quiz-option').forEach(function(btn,i){
+    btn.disabled = true;
+    if(i===q.answer) btn.classList.add('correct');
+    if(i===chosen&&!correct) btn.classList.add('wrong');
+  });
+  var fb = document.getElementById('quiz-feedback');
+  fb.className = 'quiz-feedback visible '+(correct?'correct-fb':'wrong-fb');
+  fb.textContent = (correct?UI[LANG]['exact']:UI[LANG]['incorrect'])+q.expl;
+  if(correct) S.score++;
+  document.getElementById('quiz-progress-text').textContent = S.score+'/'+S.currentTerritory.questions.length;
+  document.getElementById('quiz-next-btn').className = 'quiz-next-btn visible';
+}
+
+function nextQuestion(){
+  S.currentQ++;
+  if(S.currentQ>=S.currentTerritory.questions.length){ showResult(); }
+  else { renderQuestion(); }
+}
+
+// ============================================================
+// RESULT
+// ============================================================
+function showResult(){
+  var t = S.currentTerritory;
+  var total = t.questions.length;
+  var stars = getStars(S.score, total);
+  var season = curSeason();
+  var xpGained = (S.score*10+stars*20)*season.difficulty;
+  S.lastResultScore = S.score; S.lastResultTotal = total;
+
+  var passed = S.score >= 4;
+  var perfect = S.score === total;
+  var prev = getTerritoryStore()[t.id]||{};
+  getTerritoryStore()[t.id] = {
+    completed: passed,
+    score: Math.max(S.score, prev.score||0),
+    stars: Math.max(stars, prev.stars||0)
+  };
+  if(passed){ S.xp += xpGained; S.level = Math.floor(S.xp/XP_PER_LEVEL)+1; }
+
+  var seasonDone = isSeasonComplete();
+  var hasNext = S.season<getCurSeasons().length-1;
+
+  var icon, title;
+  if(!passed){
+    icon = '\u{1F4D6}'; title = UI[LANG]['score_insuffisant'];
+  } else if(seasonDone&&hasNext){
+    icon = '\u2728'; title = UI[LANG]['saison_ok'];
+  } else if(perfect){
+    icon = '\u{1F3C6}'; title = UI[LANG]['parfait'];
+  } else {
+    icon = '\u271D'; title = UI[LANG]['conquis'];
+  }
+  document.getElementById('result-icon').textContent = icon;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-territory-name').textContent = t.icon+' '+t.name+' \u2014 '+t.desc;
+  document.getElementById('result-score').textContent = S.score+'/'+total;
+  document.getElementById('result-stars').textContent = '\u2605'.repeat(stars)+'\u2606'.repeat(3-stars);
+  document.getElementById('result-verse-text').textContent = t.verse;
+  document.getElementById('result-verse-ref').textContent = t.verseRef;
+
+  // Save leaderboard entry if passed
+  var timeSecStr = (S.totalTimeMs/1000).toFixed(1)+'s';
+  if(passed){
+    var entry = {
+      name: S.playerName || 'Anonyme',
+      territory: t.name,
+      score: S.score,
+      total: total,
+      timeMs: S.totalTimeMs,
+      stars: stars,
+      date: new Date().toLocaleDateString('fr-FR')
+    };
+    S.leaderboard.push(entry);
+    S.leaderboard.sort(function(a,b){
+      if(b.score !== a.score) return b.score - a.score;
+      return a.timeMs - b.timeMs;
+    });
+    S.leaderboard = S.leaderboard.slice(0,20);
+    try{ if(typeof localStorage!=='undefined') localStorage.setItem('bq_leaderboard', JSON.stringify(S.leaderboard)); }catch(e){}
+  }
+  var xpMsg = '+'+xpGained+' XP \u00B7 Niveau '+S.level+(passed?' \u00B7 Temps: '+timeSecStr:'');
+  if(seasonDone&&hasNext){ S.season++; xpMsg += ' \u00B7 '+UI[LANG]['nouvelle_saison']+getCurSeasons()[S.season].name; }
+  else if(seasonDone&&!hasNext){ xpMsg += ' \u00B7 '+UI[LANG]['docteur']; }
+  document.getElementById('result-xp').textContent = xpMsg;
+  showScreen('result-screen');
+}
+
+function replayTerritory(){
+  var base = curTerritories().find(function(t){return t.id===S.currentTerritory.id;});
+  if(base) startTerritory(base.id);
+}
+
+// ============================================================
+// SHARE
+// ============================================================
+function shareResult(platform){
+  var t = S.currentTerritory;
+  var season = SEASONS[Math.max(0, S.season-(isSeasonComplete()?1:0))];
+  var stars = '\u2605'.repeat(getStars(S.lastResultScore, S.lastResultTotal));
+  var rank = getRank();
+  var text = (LANG==='en'?'I just conquered "'+t.name+'" on Bible Quest! ':'J\'ai conquis "'+t.name+'" sur Bible Quest ! ')+stars+'\n'
+    +'Score : '+S.lastResultScore+'/'+S.lastResultTotal+' \u2014 Rang : '+rank+'\n'
+    +'Saison : '+season.name+'\n'
+    +'Teste ta connaissance biblique : [lien Play Store]';
+  var enc = encodeURIComponent(text);
+  if(platform==='whatsapp'){
+    window.open('https://wa.me/?text='+enc,'_blank');
+  } else if(platform==='facebook'){
+    copyText(text);
+    window.open('https://www.facebook.com/sharer/sharer.php?quote='+enc+'&u=https://bible-quest.app','_blank');
+  } else if(platform==='tiktok'){
+    copyText(text);
+    toast('Texte copie. Colle-le dans ta video TikTok.');
+  }
+}
+
+function copyText(text){
+  if(navigator.clipboard){ navigator.clipboard.writeText(text).catch(function(){}); }
+  else { var el=document.createElement('textarea');el.value=text;document.body.appendChild(el);el.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(el); }
+}
+
+function toast(msg){
+  var el=document.createElement('div');
+  el.className='toast';el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(function(){el.remove();},3000);
+}
+
+// ============================================================
+// LEADERBOARD
+// ============================================================
+function saveName(val){
+  S.playerName = val;
+  try{ if(typeof localStorage!=='undefined') localStorage.setItem('bq_name', val); }catch(e){}
+}
+
+function showLeaderboard(){
+  var input = document.getElementById('player-name-input');
+  if(input) input.value = S.playerName;
+  renderLeaderboard();
+  showScreen('leaderboard-screen');
+}
+
+function renderLeaderboard(){
+  var el = document.getElementById('leaderboard-list');
+  if(!el) return;
+  if(S.leaderboard.length === 0){
+    el.innerHTML = '<div style="text-align:center;font-style:italic;color:var(--stone);padding:20px;">'+UI[LANG]['no_score']+'</div>';
+    return;
+  }
+  el.innerHTML = S.leaderboard.map(function(e,i){
+    var medal = i===0?'\u{1F947}':i===1?'\u{1F948}':i===2?'\u{1F949}':(i+1)+'.';
+    var timeSec = (e.timeMs/1000).toFixed(1)+'s';
+    var stars = '\u2605'.repeat(e.stars)+'\u2606'.repeat(3-e.stars);
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06);">'
+      +'<div style="font-family:Cinzel,serif;font-size:16px;min-width:32px;text-align:center;">'+medal+'</div>'
+      +'<div style="flex:1;">'
+        +'<div style="font-family:Cinzel,serif;font-size:13px;color:var(--ink);">'+e.name+'</div>'
+        +'<div style="font-size:11px;color:var(--stone);font-style:italic;">'+e.territory+' \u00B7 '+e.date+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;">'
+        +'<div style="font-family:Cinzel,serif;font-size:14px;color:var(--gold);">'+e.score+'/'+e.total+'</div>'
+        +'<div style="font-size:11px;color:var(--stone);">'+timeSec+' \u00B7 '+stars+'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+showHome();
+</script>
+</body>
+</html>
